@@ -1,10 +1,14 @@
 import type { AIPersonality, LifeInsight, AIResponse } from '@/types/ai'
 
-const GEMINI_API_KEY = 'AIzaSyAipb-sbS3B80VPLqe_YynUnaVaSX_VwHI'
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent'
 
 class GeminiService {
   private async callGemini(prompt: string): Promise<string> {
+    if (!GEMINI_API_KEY) {
+      throw new Error('Gemini API key is not configured. Please add VITE_GEMINI_API_KEY to your .env file.')
+    }
+
     try {
       const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
         method: 'POST',
@@ -21,7 +25,9 @@ class GeminiService {
       })
 
       if (!response.ok) {
-        throw new Error(`Gemini API error: ${response.status}`)
+        const errorText = await response.text()
+        console.error('Gemini API error response:', errorText)
+        throw new Error(`Gemini API error: ${response.status} - ${errorText}`)
       }
 
       const data = await response.json()
