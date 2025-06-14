@@ -1,18 +1,7 @@
 import React from 'react'
 import { NavLink } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import {
-  Brain,
-  Target,
-  User,
-  BarChart3,
-  Zap,
-  Focus,
-  BookOpen,
-  Mirror,
-  Activity,
-  Command,
-} from 'lucide-react'
+import { Brain, Target, User, BarChart3, Zap, Focus, BookOpen, Carrot as Mirror, Activity, Command } from 'lucide-react'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: BarChart3 },
