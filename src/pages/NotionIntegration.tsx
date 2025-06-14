@@ -1,17 +1,42 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { BookOpen, Link, Settings, Database, FolderSync as Sync, Search, Plus, CheckCircle, AlertCircle, ExternalLink, Target, Zap, Brain, Calendar } from 'lucide-react'
+import { BookOpen, Link, Settings, Database, FolderSync as Sync, Search, Plus, CheckCircle, AlertCircle, ExternalLink, Target, Zap, Brain, Calendar, TestTube } from 'lucide-react'
 import { useNotion } from '@/contexts/NotionContext'
 import { useAI } from '@/contexts/AIContext'
+import { useAuth } from '@/contexts/AuthContext'
 import toast from 'react-hot-toast'
 
 export default function NotionIntegration() {
-  const { integration, isConnected, isLoading, connectToNotion, disconnectFromNotion, syncData, searchContent, createContent, updateSyncSettings } = useNotion()
+  const { user } = useAuth()
+  const { integration, isConnected, isLoading, connectToNotion, disconnectFromNotion, syncData, searchContent, createContent, updateSyncSettings, testConnection } = useNotion()
   const { insights } = useAI()
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [isSearching, setIsSearching] = useState(false)
-  const [selectedDatabase, setSelectedDatabase] = useState<string>('')
+  const [isTesting, setIsTesting] = useState(false)
+
+  // Check connection status on mount
+  useEffect(() => {
+    if (isConnected) {
+      handleTestConnection()
+    }
+  }, [isConnected])
+
+  const handleTestConnection = async () => {
+    setIsTesting(true)
+    try {
+      const isValid = await testConnection()
+      if (isValid) {
+        toast.success('Notion connection is working!')
+      } else {
+        toast.error('Notion connection failed')
+      }
+    } catch (error) {
+      toast.error('Failed to test connection')
+    } finally {
+      setIsTesting(false)
+    }
+  }
 
   const handleSearch = async () => {
     if (!searchQuery.trim() || !isConnected) return
@@ -20,6 +45,9 @@ export default function NotionIntegration() {
     try {
       const results = await searchContent(searchQuery)
       setSearchResults(results)
+      if (results.length === 0) {
+        toast.info('No results found')
+      }
     } catch (error) {
       toast.error('Failed to search Notion content')
     } finally {
@@ -41,13 +69,14 @@ export default function NotionIntegration() {
   }
 
   const handleCreateQuickNote = async () => {
-    if (!isConnected) return
+    if (!isConnected) {
+      toast.error('Not connected to Notion')
+      return
+    }
 
     const noteData = {
       title: `Quick Note - ${new Date().toLocaleDateString()}`,
-      content: 'Created from GalyarderOS',
-      priority: 'medium',
-      status: 'active'
+      content: `Created from GalyarderOS by ${user?.email || 'Anonymous'}\n\nTimestamp: ${new Date().toISOString()}`
     }
 
     try {
@@ -84,7 +113,7 @@ export default function NotionIntegration() {
             </div>
           </div>
           <div className="flex items-center space-x-3">
-            <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`}></div>
+            <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'} ${isConnected ? 'animate-pulse' : ''}`}></div>
             <span className="text-sm text-neural-400">
               {isConnected ? 'Connected' : 'Disconnected'}
             </span>
@@ -160,6 +189,11 @@ export default function NotionIntegration() {
                     <p className="text-neural-200 text-sm leading-relaxed">
                       Your Notion workspace is connected and ready for data synchronization.
                     </p>
+                    {integration.lastSync && (
+                      <p className="text-xs text-neural-400 mt-2">
+                        Last sync: {integration.lastSync.toLocaleString()}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -167,10 +201,12 @@ export default function NotionIntegration() {
               <div className="grid grid-cols-2 gap-3">
                 <button
                   onClick={handleSyncInsights}
-                  className="p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors text-left"
+                  disabled={!integration.databases.insights || insights.length === 0}
+                  className="p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Sync className="w-5 h-5 text-blue-400 mb-2" />
                   <p className="text-sm font-medium text-white">Sync Insights</p>
+                  <p className="text-xs text-neural-400">{insights.length} insights</p>
                 </button>
                 <button
                   onClick={handleCreateQuickNote}
@@ -178,17 +214,31 @@ export default function NotionIntegration() {
                 >
                   <Plus className="w-5 h-5 text-green-400 mb-2" />
                   <p className="text-sm font-medium text-white">Quick Note</p>
+                  <p className="text-xs text-neural-400">Create instantly</p>
                 </button>
               </div>
 
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={disconnectFromNotion}
-                className="w-full px-4 py-2 bg-red-500/20 text-red-300 rounded-lg hover:bg-red-500/30 transition-colors"
-              >
-                Disconnect
-              </motion.button>
+              <div className="flex space-x-3">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleTestConnection}
+                  disabled={isTesting}
+                  className="flex-1 px-4 py-2 bg-blue-500/20 text-blue-300 rounded-lg hover:bg-blue-500/30 transition-colors disabled:opacity-50 flex items-center justify-center space-x-2"
+                >
+                  <TestTube className="w-4 h-4" />
+                  <span>{isTesting ? 'Testing...' : 'Test Connection'}</span>
+                </motion.button>
+                
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={disconnectFromNotion}
+                  className="px-4 py-2 bg-red-500/20 text-red-300 rounded-lg hover:bg-red-500/30 transition-colors"
+                >
+                  Disconnect
+                </motion.button>
+              </div>
             </div>
           )}
         </motion.div>
@@ -289,13 +339,13 @@ export default function NotionIntegration() {
 
           {searchResults.length > 0 && (
             <div className="space-y-3">
-              <h3 className="font-semibold text-white">Search Results:</h3>
+              <h3 className="font-semibold text-white">Search Results ({searchResults.length}):</h3>
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {searchResults.map((result, index) => (
                   <div key={index} className="p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h4 className="font-medium text-white">{result.title}</h4>
+                        <h4 className="font-medium text-white">{result.title || 'Untitled'}</h4>
                         <p className="text-xs text-neural-400">
                           Last edited: {new Date(result.last_edited_time).toLocaleDateString()}
                         </p>
@@ -324,8 +374,10 @@ export default function NotionIntegration() {
               <h2 className="text-xl font-bold text-white">Sync Settings</h2>
             </div>
             <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-              <span className="text-sm text-neural-400">Auto-sync enabled</span>
+              <div className={`w-2 h-2 rounded-full ${integration.syncEnabled ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`}></div>
+              <span className="text-sm text-neural-400">
+                {integration.syncEnabled ? 'Auto-sync enabled' : 'Auto-sync disabled'}
+              </span>
             </div>
           </div>
 
@@ -351,19 +403,37 @@ export default function NotionIntegration() {
                     <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-500"></div>
                   </label>
                 </div>
+                <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+                  <span className="text-neural-300">Configured Databases</span>
+                  <span className="text-white text-sm">
+                    {Object.values(integration.databases).filter(Boolean).length} / {databaseTypes.length}
+                  </span>
+                </div>
               </div>
             </div>
 
             <div>
               <h3 className="font-semibold text-white mb-3">Quick Actions</h3>
               <div className="grid grid-cols-2 gap-3">
-                <button className="p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors text-left">
+                <button 
+                  onClick={() => {
+                    // Implement full sync
+                    toast.info('Full sync feature coming soon!')
+                  }}
+                  className="p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors text-left"
+                >
                   <Sync className="w-5 h-5 text-blue-400 mb-2" />
                   <p className="text-sm font-medium text-white">Full Sync</p>
+                  <p className="text-xs text-neural-400">Sync all data</p>
                 </button>
-                <button className="p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors text-left">
+                <button 
+                  onClick={handleTestConnection}
+                  disabled={isTesting}
+                  className="p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors text-left disabled:opacity-50"
+                >
                   <Database className="w-5 h-5 text-purple-400 mb-2" />
                   <p className="text-sm font-medium text-white">Test Connection</p>
+                  <p className="text-xs text-neural-400">{isTesting ? 'Testing...' : 'Verify setup'}</p>
                 </button>
               </div>
             </div>
