@@ -52,7 +52,19 @@ class NotionService {
       if (!response.ok) {
         const errorText = await response.text()
         console.error('Notion API error:', errorText)
-        throw new Error(`Notion API error: ${response.status} - ${errorText}`)
+        
+        // Parse error response if it's JSON
+        let errorMessage = errorText
+        try {
+          const errorJson = JSON.parse(errorText)
+          if (errorJson.message) {
+            errorMessage = errorJson.message
+          }
+        } catch (e) {
+          // Keep original error text if not JSON
+        }
+        
+        throw new Error(`Notion API error: ${response.status} - ${errorMessage}`)
       }
 
       return await response.json()

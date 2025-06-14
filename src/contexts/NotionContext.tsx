@@ -57,10 +57,12 @@ export function NotionProvider({ children }: { children: React.ReactNode }) {
       
       // More specific error messages
       if (error instanceof Error) {
-        if (error.message.includes('401')) {
-          toast.error('Invalid Notion token. Please check your VITE_NOTION_TOKEN in .env file.')
+        if (error.message.includes('401') || error.message.includes('Invalid JWT')) {
+          toast.error('Invalid Notion token. Please check your integration token and ensure it\'s properly configured.')
         } else if (error.message.includes('not configured')) {
           toast.error('Notion token not configured. Please add VITE_NOTION_TOKEN to your .env file.')
+        } else if (error.message.includes('403')) {
+          toast.error('Access denied. Please ensure your Notion integration has the required permissions.')
         } else {
           toast.error(`Failed to connect to Notion: ${error.message}`)
         }
