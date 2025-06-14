@@ -1,5 +1,6 @@
 const NOTION_TOKEN = import.meta.env.VITE_NOTION_TOKEN
-const NOTION_API_URL = 'https://api.notion.com/v1'
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
+const NOTION_PROXY_URL = `${SUPABASE_URL}/functions/v1/notion-proxy`
 
 interface NotionPage {
   id: string
@@ -26,22 +27,23 @@ interface NotionComment {
 }
 
 class NotionService {
-  private headers = {
-    'Authorization': `Bearer ${NOTION_TOKEN}`,
-    'Content-Type': 'application/json',
-    'Notion-Version': '2022-06-28'
-  }
-
   private async makeRequest(endpoint: string, options: RequestInit = {}): Promise<any> {
     if (!NOTION_TOKEN) {
       throw new Error('Notion token is not configured. Please add VITE_NOTION_TOKEN to your .env file.')
     }
 
+    if (!SUPABASE_URL) {
+      throw new Error('Supabase URL is not configured. Please add VITE_SUPABASE_URL to your .env file.')
+    }
+
     try {
-      const response = await fetch(`${NOTION_API_URL}${endpoint}`, {
+      // Use the edge function proxy instead of direct API calls
+      const proxyUrl = `${NOTION_PROXY_URL}?endpoint=${encodeURIComponent(endpoint)}`
+      
+      const response = await fetch(proxyUrl, {
         ...options,
         headers: {
-          ...this.headers,
+          'Content-Type': 'application/json',
           ...options.headers
         }
       })
