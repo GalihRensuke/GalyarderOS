@@ -58,16 +58,18 @@ export function NotionProvider({ children }: { children: React.ReactNode }) {
       // More specific error messages
       if (error instanceof Error) {
         if (error.message.includes('401') || error.message.includes('Invalid JWT')) {
-          toast.error('Invalid Notion token. Please check your integration token and ensure it\'s properly configured.')
+          toast.error('Invalid Notion token. Please check your integration token in the .env file. Make sure you have set VITE_NOTION_TOKEN with a valid Notion integration token.')
         } else if (error.message.includes('not configured')) {
-          toast.error('Notion token not configured. Please add VITE_NOTION_TOKEN to your .env file.')
+          toast.error('Notion token not configured. Please add VITE_NOTION_TOKEN to your .env file with your Notion integration token.')
         } else if (error.message.includes('403')) {
           toast.error('Access denied. Please ensure your Notion integration has the required permissions.')
+        } else if (error.message.includes('CORS')) {
+          toast.error('CORS error. The Notion API proxy may not be properly configured.')
         } else {
           toast.error(`Failed to connect to Notion: ${error.message}`)
         }
       } else {
-        toast.error('Failed to connect to Notion. Please check your configuration.')
+        toast.error('Failed to connect to Notion. Please check your configuration and try again.')
       }
     } finally {
       setIsLoading(false)

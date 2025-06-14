@@ -17,6 +17,7 @@ import {
   Award,
   Flame
 } from 'lucide-react'
+import { useAuth } from '@/contexts/AuthContext'
 import toast from 'react-hot-toast'
 
 interface Ritual {
@@ -36,7 +37,7 @@ interface Ritual {
   created_at: string
 }
 
-// Mock data
+// Mock data - in a real app this would come from the API
 const mockRituals: Ritual[] = [
   {
     id: '1',
@@ -105,11 +106,31 @@ const mockRituals: Ritual[] = [
 ]
 
 export default function RitualEngine() {
+  const { user } = useAuth()
   const [rituals, setRituals] = useState<Ritual[]>(mockRituals)
   const [loading, setLoading] = useState(false)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [selectedRitual, setSelectedRitual] = useState<Ritual | null>(null)
   const [completingRitual, setCompletingRitual] = useState<string | null>(null)
+
+  // Show sign-in prompt if not authenticated
+  if (!user) {
+    return (
+      <div className="max-w-4xl mx-auto">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="neural-card text-center py-12"
+        >
+          <div className="w-16 h-16 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <Zap className="w-8 h-8 text-white" />
+          </div>
+          <h1 className="text-2xl font-bold text-white mb-4">Please sign in to access Ritual Engine</h1>
+          <p className="text-neural-300">Track your habits and build powerful daily rituals.</p>
+        </motion.div>
+      </div>
+    )
+  }
 
   const handleCompleteRitual = async (ritualId: string) => {
     setCompletingRitual(ritualId)

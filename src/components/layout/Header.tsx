@@ -1,11 +1,12 @@
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Search, Bell, Settings, User, Mic, MicOff } from 'lucide-react'
+import { Search, Bell, Settings, User, Mic, MicOff, LogOut } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import AuthModal from '@/components/auth/AuthModal'
+import toast from 'react-hot-toast'
 
 export default function Header() {
-  const { user, profile } = useAuth()
+  const { user, profile, signOut } = useAuth()
   const [isListening, setIsListening] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [showAuthModal, setShowAuthModal] = useState(false)
@@ -13,6 +14,15 @@ export default function Header() {
   const toggleVoiceInput = () => {
     setIsListening(!isListening)
     // Voice input logic would go here
+  }
+
+  const handleSignOut = async () => {
+    try {
+      await signOut()
+      toast.success('Signed out successfully')
+    } catch (error: any) {
+      toast.error(error.message)
+    }
   }
 
   return (
@@ -64,22 +74,67 @@ export default function Header() {
               <Settings className="w-5 h-5 text-neural-300" />
             </motion.button>
 
-            <div className="flex items-center space-x-3 pl-4 border-l border-white/10 hover:bg-white/5 rounded-lg p-2 transition-colors">
-              <div className="text-right">
-                <p className="text-sm font-medium text-white">
-                  Guest User
-                </p>
-                <p className="text-xs text-neural-400">
-                  Level 1 Optimizer
-                </p>
+            {user ? (
+              <div className="flex items-center space-x-3 pl-4 border-l border-white/10">
+                <div className="text-right">
+                  <p className="text-sm font-medium text-white">
+                    {profile?.full_name || user.email?.split('@')[0] || 'User'}
+                  </p>
+                  <p className="text-xs text-neural-400">
+                    Level {profile?.level || 1} Optimizer
+                  </p>
+                </div>
+                <div className="relative group">
+                  <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center cursor-pointer">
+                    {profile?.avatar_url ? (
+                      <img 
+                        src={profile.avatar_url} 
+                        alt="Profile" 
+                        className="w-10 h-10 rounded-xl object-cover"
+                      />
+                    ) : (
+                      <User className="w-5 h-5 text-white" />
+                    )}
+                  </div>
+                  
+                  {/* Dropdown menu */}
+                  <div className="absolute right-0 top-12 w-48 bg-neural-800 border border-white/10 rounded-xl shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                    <div className="p-3 border-b border-white/10">
+                      <p className="text-sm font-medium text-white">{user.email}</p>
+                      <p className="text-xs text-neural-400">
+                        {profile?.experience_points || 0} XP
+                      </p>
+                    </div>
+                    <div className="p-2">
+                      <button
+                        onClick={handleSignOut}
+                        className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-neural-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        <span>Sign Out</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center">
-                <User className="w-5 h-5 text-white" />
-              </div>
-            </div>
+            ) : (
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setShowAuthModal(true)}
+                className="px-4 py-2 bg-primary-500/20 text-primary-300 rounded-lg hover:bg-primary-500/30 transition-colors"
+              >
+                Sign In
+              </motion.button>
+            )}
           </div>
         </div>
       </header>
+
+      <AuthModal 
+        isOpen={showAuthModal} 
+        onClose={() => setShowAuthModal(false)} 
+      />
     </>
   )
 }
