@@ -14,6 +14,7 @@ const navigation = [
   { name: 'Knowledge Hub', href: '/knowledge', icon: BookOpen },
   { name: 'Reflection', href: '/reflection', icon: Mirror },
   { name: 'Life Analytics', href: '/analytics', icon: Brain },
+  { name: 'Notion Sync', href: '/notion', icon: BookOpen },
 ]
 
 export default function Sidebar() {

@@ -18,52 +18,57 @@ import FlowState from './pages/FlowState'
 import KnowledgeHub from './pages/KnowledgeHub'
 import ReflectionIntelligence from './pages/ReflectionIntelligence'
 import LifeAnalytics from './pages/LifeAnalytics'
+import NotionIntegration from './pages/NotionIntegration'
 
 // Providers
 import { AuthProvider } from './contexts/AuthContext'
 import { AIProvider } from './contexts/AIContext'
+import { NotionProvider } from './contexts/NotionContext'
 
 function App() {
   return (
     <AuthProvider>
       <AIProvider>
-        <Router>
-          <div className="min-h-screen bg-gradient-to-br from-neural-900 via-neural-800 to-quantum-900">
-            <div className="flex">
-              <Sidebar />
-              <div className="flex-1 flex flex-col">
-                <Header />
-                <main className="flex-1 p-6 overflow-auto">
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                  >
-                    <Routes>
-                      <Route path="/" element={<Dashboard />} />
-                      <Route path="/command" element={<CommandCenter />} />
-                      <Route path="/identity" element={<IdentityCore />} />
-                      <Route path="/vision" element={<VisionArchitecture />} />
-                      <Route path="/balance" element={<LifeBalance />} />
-                      <Route path="/rituals" element={<RitualEngine />} />
-                      <Route path="/flow" element={<FlowState />} />
-                      <Route path="/knowledge" element={<KnowledgeHub />} />
-                      <Route path="/reflection" element={<ReflectionIntelligence />} />
-                      <Route path="/analytics" element={<LifeAnalytics />} />
-                    </Routes>
-                  </motion.div>
-                </main>
+        <NotionProvider>
+          <Router>
+            <div className="min-h-screen bg-gradient-to-br from-neural-900 via-neural-800 to-quantum-900">
+              <div className="flex">
+                <Sidebar />
+                <div className="flex-1 flex flex-col">
+                  <Header />
+                  <main className="flex-1 p-6 overflow-auto">
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5 }}
+                    >
+                      <Routes>
+                        <Route path="/" element={<Dashboard />} />
+                        <Route path="/command" element={<CommandCenter />} />
+                        <Route path="/identity" element={<IdentityCore />} />
+                        <Route path="/vision" element={<VisionArchitecture />} />
+                        <Route path="/balance" element={<LifeBalance />} />
+                        <Route path="/rituals" element={<RitualEngine />} />
+                        <Route path="/flow" element={<FlowState />} />
+                        <Route path="/knowledge" element={<KnowledgeHub />} />
+                        <Route path="/reflection" element={<ReflectionIntelligence />} />
+                        <Route path="/analytics" element={<LifeAnalytics />} />
+                        <Route path="/notion" element={<NotionIntegration />} />
+                      </Routes>
+                    </motion.div>
+                  </main>
+                </div>
               </div>
+              <Toaster 
+                position="top-right"
+                toastOptions={{
+                  className: 'glass-morphism text-neural-50',
+                  duration: 4000,
+                }}
+              />
             </div>
-            <Toaster 
-              position="top-right"
-              toastOptions={{
-                className: 'glass-morphism text-neural-50',
-                duration: 4000,
-              }}
-            />
-          </div>
-        </Router>
+          </Router>
+        </NotionProvider>
       </AIProvider>
     </AuthProvider>
   )

@@ -15,6 +15,9 @@ export interface LifeInsight {
   category: string
   timestamp: Date
   domain: string
+  confidence?: number
+  timeframe?: 'immediate' | 'this_week' | 'this_month' | 'long_term'
+  relatedDomains?: string[]
 }
 
 export interface AIResponse {
@@ -23,6 +26,8 @@ export interface AIResponse {
   timestamp: Date
   context: any
   suggestions: string[]
+  confidence?: number
+  followUpQuestions?: string[]
 }
 
 export interface LifeDomain {
@@ -44,4 +49,18 @@ export interface DomainMetric {
   unit: string
   trend: 'up' | 'down' | 'stable'
   target: number
+}
+
+export interface NotionIntegration {
+  isConnected: boolean
+  workspaceId?: string
+  databases: {
+    goals?: string
+    habits?: string
+    insights?: string
+    reflections?: string
+    tasks?: string
+  }
+  lastSync?: Date
+  syncEnabled: boolean
 }
