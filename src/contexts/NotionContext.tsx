@@ -13,6 +13,7 @@ interface NotionContextType {
   searchContent: (query: string) => Promise<any[]>
   createContent: (type: string, data: any) => Promise<any>
   updateSyncSettings: (settings: Partial<NotionIntegration>) => void
+  testConnection: () => Promise<boolean>
 }
 
 const defaultIntegration: NotionIntegration = {
@@ -26,6 +27,15 @@ const NotionContext = createContext<NotionContextType | undefined>(undefined)
 export function NotionProvider({ children }: { children: React.ReactNode }) {
   const [integration, setIntegration] = useState<NotionIntegration>(defaultIntegration)
   const [isLoading, setIsLoading] = useState(false)
+
+  const testConnection = useCallback(async (): Promise<boolean> => {
+    try {
+      return await notionService.testConnection()
+    } catch (error) {
+      console.error('Connection test failed:', error)
+      return false
+    }
+  }, [])
 
   const connectToNotion = useCallback(async () => {
     setIsLoading(true)
@@ -44,7 +54,19 @@ export function NotionProvider({ children }: { children: React.ReactNode }) {
       toast.success('Successfully connected to Notion!')
     } catch (error) {
       console.error('Failed to connect to Notion:', error)
-      toast.error('Failed to connect to Notion. Please check your token.')
+      
+      // More specific error messages
+      if (error instanceof Error) {
+        if (error.message.includes('401')) {
+          toast.error('Invalid Notion token. Please check your VITE_NOTION_TOKEN in .env file.')
+        } else if (error.message.includes('not configured')) {
+          toast.error('Notion token not configured. Please add VITE_NOTION_TOKEN to your .env file.')
+        } else {
+          toast.error(`Failed to connect to Notion: ${error.message}`)
+        }
+      } else {
+        toast.error('Failed to connect to Notion. Please check your configuration.')
+      }
     } finally {
       setIsLoading(false)
     }
@@ -114,21 +136,24 @@ export function NotionProvider({ children }: { children: React.ReactNode }) {
 
     try {
       const databaseId = integration.databases[type as keyof typeof integration.databases]
-      if (!databaseId) {
-        throw new Error(`Database for ${type} not configured`)
-      }
-
+      
       switch (type) {
         case 'goals':
-          return await notionService.createGoalEntry(databaseId, data)
+          return await notionService.createGoalEntry(databaseId!, data)
         case 'habits':
-          return await notionService.createHabitEntry(databaseId, data)
+          return await notionService.createHabitEntry(databaseId!, data)
         case 'insights':
-          return await notionService.createInsightEntry(databaseId, data)
+          return await notionService.createInsightEntry(databaseId!, data)
         case 'reflections':
-          return await notionService.createReflectionEntry(databaseId, data)
+          return await notionService.createReflectionEntry(databaseId!, data)
+        case 'notes':
+          return await notionService.createQuickNote(data.title, data.content, databaseId)
         default:
-          return await notionService.createDatabaseEntry(databaseId, data)
+          if (databaseId) {
+            return await notionService.createDatabaseEntry(databaseId, data)
+          } else {
+            return await notionService.createQuickNote(data.title || 'Quick Note', data.content || 'Created from GalyarderOS')
+          }
       }
     } catch (error) {
       console.error(`Failed to create ${type}:`, error)
@@ -149,7 +174,8 @@ export function NotionProvider({ children }: { children: React.ReactNode }) {
     syncData,
     searchContent,
     createContent,
-    updateSyncSettings
+    updateSyncSettings,
+    testConnection
   }
 
   return (

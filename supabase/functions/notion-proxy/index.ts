@@ -15,7 +15,7 @@
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, PATCH",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, Notion-Version, X-Notion-Token",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, Notion-Version",
 };
 
 // Try multiple environment variable names for the Notion token
@@ -54,12 +54,9 @@ Deno.serve(async (req: Request) => {
     // If no token in environment, try to get it from request headers
     if (!token) {
       const authHeader = req.headers.get('Authorization');
-      const notionTokenHeader = req.headers.get('X-Notion-Token');
       
       if (authHeader && authHeader.startsWith('Bearer ')) {
         token = authHeader.substring(7);
-      } else if (notionTokenHeader) {
-        token = notionTokenHeader;
       }
     }
 
@@ -67,10 +64,10 @@ Deno.serve(async (req: Request) => {
       return new Response(
         JSON.stringify({ 
           error: 'Notion token not configured',
-          details: 'Please set NOTION_TOKEN as a Supabase secret or provide it in the request headers'
+          details: 'Please set NOTION_TOKEN as a Supabase secret or provide it in the Authorization header'
         }),
         {
-          status: 500,
+          status: 401,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         }
       );

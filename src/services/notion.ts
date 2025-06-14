@@ -44,7 +44,7 @@ class NotionService {
         ...options,
         headers: {
           'Content-Type': 'application/json',
-          'X-Notion-Token': NOTION_TOKEN, // Pass token in custom header
+          'Authorization': `Bearer ${NOTION_TOKEN}`, // Pass token in Authorization header
           ...options.headers
         }
       })
@@ -59,6 +59,17 @@ class NotionService {
     } catch (error) {
       console.error('Notion API request failed:', error)
       throw error
+    }
+  }
+
+  // Test connection
+  async testConnection(): Promise<boolean> {
+    try {
+      await this.getUserInfo()
+      return true
+    } catch (error) {
+      console.error('Notion connection test failed:', error)
+      return false
     }
   }
 
@@ -236,6 +247,13 @@ class NotionService {
         ]
       }
     }
+
+    // Remove undefined properties
+    Object.keys(properties).forEach(key => {
+      if (properties[key as keyof typeof properties] === undefined) {
+        delete properties[key as keyof typeof properties]
+      }
+    })
 
     return this.createDatabaseEntry(databaseId, properties)
   }
@@ -479,6 +497,69 @@ class NotionService {
       } catch (error) {
         console.error(`Failed to sync habit ${habit.name}:`, error)
       }
+    }
+  }
+
+  // Create quick note
+  async createQuickNote(title: string, content: string, databaseId?: string): Promise<NotionPage> {
+    const properties = {
+      Name: {
+        title: [
+          {
+            text: {
+              content: title
+            }
+          }
+        ]
+      },
+      Content: {
+        rich_text: [
+          {
+            text: {
+              content: content
+            }
+          }
+        ]
+      },
+      Created: {
+        date: {
+          start: new Date().toISOString()
+        }
+      },
+      Source: {
+        select: {
+          name: 'GalyarderOS'
+        }
+      }
+    }
+
+    if (databaseId) {
+      return this.createDatabaseEntry(databaseId, properties)
+    } else {
+      // Create as a page if no database specified
+      return this.makeRequest('/pages', {
+        method: 'POST',
+        body: JSON.stringify({
+          parent: { type: 'workspace', workspace: true },
+          properties,
+          children: [
+            {
+              object: 'block',
+              type: 'paragraph',
+              paragraph: {
+                rich_text: [
+                  {
+                    type: 'text',
+                    text: {
+                      content: content
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        })
+      })
     }
   }
 }

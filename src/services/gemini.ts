@@ -75,7 +75,9 @@ class GeminiService {
   async generateLifeInsight(domain: string, data: any, personality: AIPersonality): Promise<LifeInsight> {
     const systemInstruction = `You are ${personality.name}, an advanced AI life optimization coach with expertise in ${personality.expertise.join(', ')}. 
     Your communication style is ${personality.communicationStyle} and you adapt your responses based on user context with ${Math.round(personality.adaptiveness * 100)}% adaptiveness.
-    Always provide actionable, personalized insights that help users optimize their life across multiple domains.`
+    Always provide actionable, personalized insights that help users optimize their life across multiple domains.
+    
+    Generate insights that are practical, specific, and immediately actionable. Focus on behavioral changes and measurable improvements.`
 
     const prompt = `
     Analyze the following ${domain} data and provide a comprehensive life optimization insight:
@@ -94,6 +96,7 @@ class GeminiService {
     - relatedDomains: Array of other life domains this insight might impact
     
     Focus on being ${personality.communicationStyle} while providing maximum value.
+    Make sure all action items are specific, measurable, and achievable.
     `
 
     try {
@@ -138,13 +141,15 @@ class GeminiService {
   }
 
   async processQuery(question: string, context: any, personality: AIPersonality): Promise<AIResponse> {
-    const systemInstruction = `You are ${personality.name}, an advanced AI life optimization assistant. 
+    const systemInstruction = `You are ${personality.name}, an advanced AI life optimization assistant powered by Gemini 2.0 Flash. 
     Your expertise includes: ${personality.expertise.join(', ')}.
     Communication style: ${personality.communicationStyle}
     Adaptiveness level: ${Math.round(personality.adaptiveness * 100)}%
     
-    Always provide helpful, actionable responses that align with life optimization and personal growth principles.
-    Be conversational but insightful, and tailor your response to the user's context and needs.`
+    You are part of GalyarderOS, a comprehensive life optimization platform. Always provide helpful, actionable responses that align with life optimization and personal growth principles.
+    Be conversational but insightful, and tailor your response to the user's context and needs.
+    
+    Focus on practical advice that users can implement immediately. When discussing goals, habits, or life improvements, be specific and measurable.`
 
     const prompt = `
     User Question: ${question}
@@ -156,8 +161,10 @@ class GeminiService {
     2. Offers actionable insights or recommendations
     3. Connects to broader life optimization principles when relevant
     4. Suggests next steps or follow-up actions
+    5. Is practical and immediately implementable
     
     Keep the tone ${personality.communicationStyle} and focus on practical value.
+    If the question is about life optimization, provide specific strategies and techniques.
     `
 
     try {
@@ -218,33 +225,63 @@ class GeminiService {
     return followUps.slice(0, 2) // Return 2 follow-up questions
   }
 
-  async generateNotionContent(type: 'page' | 'database_entry', data: any): Promise<any> {
-    const systemInstruction = `You are an expert content creator for Notion workspaces. 
-    Create well-structured, actionable content that maximizes productivity and organization.
-    Focus on clarity, actionability, and integration with life optimization systems.`
+  async generateGoalRecommendations(userContext: any): Promise<any[]> {
+    const systemInstruction = `You are an expert life coach specializing in goal setting and achievement. 
+    Generate personalized goal recommendations based on user context and life optimization principles.`
 
     const prompt = `
-    Create a ${type} for Notion with the following data:
-    ${JSON.stringify(data, null, 2)}
+    Based on the following user context, generate 3-5 personalized goal recommendations:
     
-    Generate a JSON response with:
-    - title: Clear, descriptive title
-    - content: Rich text content with proper formatting
-    - properties: Relevant properties for database entries
-    - tags: Appropriate tags for organization
-    - priority: Priority level (1-5)
-    - status: Current status
-    - nextActions: Specific next actions
+    User Context: ${JSON.stringify(userContext, null, 2)}
     
-    Make it actionable and well-organized for maximum productivity.
+    For each goal, provide:
+    - title: Clear, specific goal title
+    - description: Detailed description of the goal
+    - category: Life domain (Business, Health, Learning, Financial, Personal)
+    - priority: high, medium, or low
+    - timeframe: Target completion timeframe
+    - milestones: 3-4 key milestones to track progress
+    - reasoning: Why this goal is recommended for this user
+    
+    Return as JSON array.
     `
 
     try {
       const response = await this.callGemini(prompt, systemInstruction)
       return JSON.parse(response.replace(/```json\n?|\n?```/g, ''))
     } catch (error) {
-      console.error('Failed to generate Notion content:', error)
-      throw error
+      console.error('Failed to generate goal recommendations:', error)
+      return []
+    }
+  }
+
+  async generateHabitSuggestions(userGoals: any[]): Promise<any[]> {
+    const systemInstruction = `You are a behavioral psychology expert specializing in habit formation. 
+    Generate habit suggestions that support the user's goals and promote life optimization.`
+
+    const prompt = `
+    Based on these user goals, suggest 5-7 daily/weekly habits that would support achievement:
+    
+    Goals: ${JSON.stringify(userGoals, null, 2)}
+    
+    For each habit, provide:
+    - name: Clear habit name
+    - description: What the habit involves
+    - frequency: daily, weekly, or custom
+    - category: Health, Productivity, Learning, Mindfulness, etc.
+    - difficulty: easy, medium, hard
+    - impact: Expected impact on goals (high, medium, low)
+    - startingTips: 2-3 tips for getting started
+    
+    Return as JSON array.
+    `
+
+    try {
+      const response = await this.callGemini(prompt, systemInstruction)
+      return JSON.parse(response.replace(/```json\n?|\n?```/g, ''))
+    } catch (error) {
+      console.error('Failed to generate habit suggestions:', error)
+      return []
     }
   }
 }

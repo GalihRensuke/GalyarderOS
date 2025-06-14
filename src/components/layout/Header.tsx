@@ -4,7 +4,7 @@ import { Search, Bell, Settings, User, Mic, MicOff } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 
 export default function Header() {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const [isListening, setIsListening] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
 
@@ -64,12 +64,22 @@ export default function Header() {
           <div className="flex items-center space-x-3 pl-4 border-l border-white/10">
             <div className="text-right">
               <p className="text-sm font-medium text-white">
-                {user?.email?.split('@')[0] || 'Guest'}
+                {profile?.full_name || user?.email?.split('@')[0] || 'Guest'}
               </p>
-              <p className="text-xs text-neural-400">Level 7 Optimizer</p>
+              <p className="text-xs text-neural-400">
+                Level {profile?.level || 1} Optimizer
+              </p>
             </div>
             <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center">
-              <User className="w-5 h-5 text-white" />
+              {profile?.avatar_url ? (
+                <img 
+                  src={profile.avatar_url} 
+                  alt="Avatar" 
+                  className="w-full h-full rounded-xl object-cover"
+                />
+              ) : (
+                <User className="w-5 h-5 text-white" />
+              )}
             </div>
           </div>
         </div>
