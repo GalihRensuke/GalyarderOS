@@ -1,21 +1,6 @@
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
-import { 
-  BookOpen, 
-  Link, 
-  Settings, 
-  Database,
-  Sync,
-  Search,
-  Plus,
-  CheckCircle,
-  AlertCircle,
-  ExternalLink,
-  Target,
-  Zap,
-  Brain,
-  Calendar
-} from 'lucide-react'
+import { BookOpen, Link, Settings, Database, FolderSync as Sync, Search, Plus, CheckCircle, AlertCircle, ExternalLink, Target, Zap, Brain, Calendar } from 'lucide-react'
 import { useNotion } from '@/contexts/NotionContext'
 import { useAI } from '@/contexts/AIContext'
 import toast from 'react-hot-toast'
