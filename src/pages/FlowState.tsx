@@ -15,8 +15,6 @@ import {
   Timer,
   BarChart3
 } from 'lucide-react'
-import { flowStateAPI } from '@/services/api'
-import { useAuth } from '@/contexts/AuthContext'
 import toast from 'react-hot-toast'
 
 interface FlowSession {
@@ -35,21 +33,84 @@ interface FlowSession {
   created_at: string
 }
 
-export default function FlowState() {
-  const { user } = useAuth()
-  const [sessions, setSessions] = useState<FlowSession[]>([])
-  const [activeSession, setActiveSession] = useState<FlowSession | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [showCreateModal, setShowCreateModal] = useState(false)
-  const [analytics, setAnalytics] = useState<any>(null)
-  const [timer, setTimer] = useState(0)
+// Mock data
+const mockSessions: FlowSession[] = [
+  {
+    id: '1',
+    name: 'Deep Work Session',
+    type: 'deep_work',
+    planned_duration: 90,
+    actual_duration: 85,
+    start_time: '2024-01-15T09:00:00Z',
+    end_time: '2024-01-15T10:25:00Z',
+    status: 'completed',
+    focus_score: 8,
+    productivity_score: 9,
+    distraction_count: 2,
+    environment_settings: {
+      noise_level: 'ambient',
+      music_enabled: true,
+      notifications_blocked: true
+    },
+    created_at: '2024-01-15T08:55:00Z'
+  },
+  {
+    id: '2',
+    name: 'Creative Writing',
+    type: 'creative',
+    planned_duration: 60,
+    actual_duration: 65,
+    start_time: '2024-01-14T14:00:00Z',
+    end_time: '2024-01-14T15:05:00Z',
+    status: 'completed',
+    focus_score: 9,
+    productivity_score: 8,
+    distraction_count: 1,
+    environment_settings: {
+      noise_level: 'silent',
+      music_enabled: false,
+      notifications_blocked: true
+    },
+    created_at: '2024-01-14T13:55:00Z'
+  },
+  {
+    id: '3',
+    name: 'Learning Session',
+    type: 'learning',
+    planned_duration: 45,
+    start_time: new Date().toISOString(),
+    status: 'active',
+    distraction_count: 0,
+    environment_settings: {
+      noise_level: 'moderate',
+      music_enabled: true,
+      notifications_blocked: false
+    },
+    created_at: new Date().toISOString()
+  }
+]
 
-  useEffect(() => {
-    if (user) {
-      loadSessions()
-      loadAnalytics()
-    }
-  }, [user])
+const mockAnalytics = {
+  totalSessions: 25,
+  totalFocusTime: 1800, // minutes
+  averageSessionLength: 72,
+  averageFocusScore: 8.2,
+  sessionsByType: {
+    'deep_work': 12,
+    'creative': 8,
+    'learning': 5
+  }
+}
+
+export default function FlowState() {
+  const [sessions, setSessions] = useState<FlowSession[]>(mockSessions)
+  const [activeSession, setActiveSession] = useState<FlowSession | null>(
+    mockSessions.find(s => s.status === 'active') || null
+  )
+  const [loading, setLoading] = useState(false)
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [analytics] = useState(mockAnalytics)
+  const [timer, setTimer] = useState(0)
 
   useEffect(() => {
     let interval: NodeJS.Timeout
@@ -63,75 +124,49 @@ export default function FlowState() {
     return () => clearInterval(interval)
   }, [activeSession])
 
-  const loadSessions = async () => {
-    try {
-      const response = await flowStateAPI.getFlowSessions(1, 20)
-      if (response.success && response.data) {
-        setSessions(response.data)
-        const active = response.data.find(s => s.status === 'active' || s.status === 'paused')
-        setActiveSession(active || null)
-      }
-    } catch (error) {
-      console.error('Failed to load sessions:', error)
-      toast.error('Failed to load flow sessions')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const loadAnalytics = async () => {
-    try {
-      const response = await flowStateAPI.getFlowAnalytics('30d')
-      if (response.success) {
-        setAnalytics(response.data)
-      }
-    } catch (error) {
-      console.error('Failed to load analytics:', error)
-    }
-  }
-
   const handleStartSession = async (sessionId: string) => {
-    try {
-      const response = await flowStateAPI.startFlowSession(sessionId)
-      if (response.success) {
-        toast.success('Flow session started! 🚀')
-        loadSessions()
+    const session = sessions.find(s => s.id === sessionId)
+    if (session) {
+      const updatedSession = {
+        ...session,
+        status: 'active' as const,
+        start_time: new Date().toISOString()
       }
-    } catch (error) {
-      console.error('Failed to start session:', error)
-      toast.error('Failed to start session')
+      setSessions(prev => prev.map(s => s.id === sessionId ? updatedSession : s))
+      setActiveSession(updatedSession)
+      toast.success('Flow session started! 🚀')
     }
   }
 
   const handlePauseSession = async (sessionId: string) => {
-    try {
-      const response = await flowStateAPI.pauseFlowSession(sessionId)
-      if (response.success) {
-        toast.success('Session paused')
-        loadSessions()
-      }
-    } catch (error) {
-      console.error('Failed to pause session:', error)
-      toast.error('Failed to pause session')
+    setSessions(prev => prev.map(s => 
+      s.id === sessionId ? { ...s, status: 'paused' as const } : s
+    ))
+    if (activeSession?.id === sessionId) {
+      setActiveSession(prev => prev ? { ...prev, status: 'paused' } : null)
     }
+    toast.success('Session paused')
   }
 
   const handleCompleteSession = async (sessionId: string) => {
-    try {
-      const completionData = {
-        focus_score: 8,
-        productivity_score: 9,
-        notes: 'Great focus session!'
+    const session = sessions.find(s => s.id === sessionId)
+    if (session) {
+      const endTime = new Date()
+      const startTime = new Date(session.start_time)
+      const actualDuration = Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60))
+      
+      const completedSession = {
+        ...session,
+        status: 'completed' as const,
+        end_time: endTime.toISOString(),
+        actual_duration: actualDuration,
+        focus_score: Math.floor(Math.random() * 3) + 8, // 8-10
+        productivity_score: Math.floor(Math.random() * 3) + 8 // 8-10
       }
-      const response = await flowStateAPI.completeFlowSession(sessionId, completionData)
-      if (response.success) {
-        toast.success('Session completed! 🎉')
-        loadSessions()
-        loadAnalytics()
-      }
-    } catch (error) {
-      console.error('Failed to complete session:', error)
-      toast.error('Failed to complete session')
+      
+      setSessions(prev => prev.map(s => s.id === sessionId ? completedSession : s))
+      setActiveSession(null)
+      toast.success('Session completed! 🎉')
     }
   }
 
@@ -155,28 +190,6 @@ export default function FlowState() {
       'custom': 'from-gray-500 to-slate-500'
     }
     return colors[type] || 'from-gray-500 to-slate-500'
-  }
-
-  if (!user) {
-    return (
-      <div className="max-w-4xl mx-auto">
-        <div className="neural-card text-center">
-          <h1 className="text-2xl font-bold text-white mb-4">Please sign in to access Flow State</h1>
-          <p className="text-neural-300">Track your focus sessions and optimize your productivity.</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (loading) {
-    return (
-      <div className="max-w-4xl mx-auto">
-        <div className="neural-card text-center">
-          <div className="w-16 h-16 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-neural-300">Loading your flow sessions...</p>
-        </div>
-      </div>
-    )
   }
 
   return (
@@ -327,7 +340,7 @@ export default function FlowState() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-neural-400">Blocking:</span>
-                    <span className="text-white">{activeSession.environment_settings.website_blocking_enabled ? 'On' : 'Off'}</span>
+                    <span className="text-white">{activeSession.environment_settings.notifications_blocked ? 'On' : 'Off'}</span>
                   </div>
                 </div>
               </div>
@@ -337,54 +350,50 @@ export default function FlowState() {
       )}
 
       {/* Analytics */}
-      {analytics && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="neural-card"
-        >
-          <div className="flex items-center space-x-3 mb-6">
-            <BarChart3 className="w-6 h-6 text-primary-400" />
-            <h2 className="text-xl font-bold text-white">30-Day Analytics</h2>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="neural-card"
+      >
+        <div className="flex items-center space-x-3 mb-6">
+          <BarChart3 className="w-6 h-6 text-primary-400" />
+          <h2 className="text-xl font-bold text-white">30-Day Analytics</h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="p-4 bg-white/5 rounded-xl">
+            <h3 className="font-medium text-white mb-2">Total Sessions</h3>
+            <p className="text-2xl font-bold text-blue-400">{analytics.totalSessions}</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="p-4 bg-white/5 rounded-xl">
-              <h3 className="font-medium text-white mb-2">Total Sessions</h3>
-              <p className="text-2xl font-bold text-blue-400">{analytics.totalSessions}</p>
-            </div>
-
-            <div className="p-4 bg-white/5 rounded-xl">
-              <h3 className="font-medium text-white mb-2">Focus Time</h3>
-              <p className="text-2xl font-bold text-green-400">{Math.round(analytics.totalFocusTime / 60)}h</p>
-            </div>
-
-            <div className="p-4 bg-white/5 rounded-xl">
-              <h3 className="font-medium text-white mb-2">Avg Focus Score</h3>
-              <p className="text-2xl font-bold text-purple-400">{analytics.averageFocusScore.toFixed(1)}</p>
-            </div>
-
-            <div className="p-4 bg-white/5 rounded-xl">
-              <h3 className="font-medium text-white mb-2">Avg Session</h3>
-              <p className="text-2xl font-bold text-orange-400">{Math.round(analytics.averageSessionLength)}m</p>
-            </div>
+          <div className="p-4 bg-white/5 rounded-xl">
+            <h3 className="font-medium text-white mb-2">Focus Time</h3>
+            <p className="text-2xl font-bold text-green-400">{Math.round(analytics.totalFocusTime / 60)}h</p>
           </div>
 
-          {analytics.sessionsByType && (
-            <div className="mt-6">
-              <h3 className="font-medium text-white mb-4">Sessions by Type</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {Object.entries(analytics.sessionsByType).map(([type, count]) => (
-                  <div key={type} className="p-3 bg-white/5 rounded-lg">
-                    <p className="text-sm text-neural-400 capitalize">{type.replace('_', ' ')}</p>
-                    <p className="text-lg font-bold text-white">{count as number}</p>
-                  </div>
-                ))}
+          <div className="p-4 bg-white/5 rounded-xl">
+            <h3 className="font-medium text-white mb-2">Avg Focus Score</h3>
+            <p className="text-2xl font-bold text-purple-400">{analytics.averageFocusScore.toFixed(1)}</p>
+          </div>
+
+          <div className="p-4 bg-white/5 rounded-xl">
+            <h3 className="font-medium text-white mb-2">Avg Session</h3>
+            <p className="text-2xl font-bold text-orange-400">{Math.round(analytics.averageSessionLength)}m</p>
+          </div>
+        </div>
+
+        <div className="mt-6">
+          <h3 className="font-medium text-white mb-4">Sessions by Type</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {Object.entries(analytics.sessionsByType).map(([type, count]) => (
+              <div key={type} className="p-3 bg-white/5 rounded-lg">
+                <p className="text-sm text-neural-400 capitalize">{type.replace('_', ' ')}</p>
+                <p className="text-lg font-bold text-white">{count as number}</p>
               </div>
-            </div>
-          )}
-        </motion.div>
-      )}
+            ))}
+          </div>
+        </div>
+      </motion.div>
 
       {/* Recent Sessions */}
       <motion.div
@@ -394,78 +403,64 @@ export default function FlowState() {
       >
         <h2 className="text-xl font-bold text-white mb-6">Recent Sessions</h2>
 
-        {sessions.length === 0 ? (
-          <div className="text-center py-12">
-            <Focus className="w-16 h-16 text-neural-600 mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-white mb-2">No sessions yet</h3>
-            <p className="text-neural-400 mb-6">Create your first flow session to start tracking your focus</p>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="quantum-button"
+        <div className="space-y-4">
+          {sessions.filter(s => s.status !== 'active').slice(0, 5).map((session, index) => (
+            <motion.div
+              key={session.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+              className="p-4 bg-white/5 rounded-xl border border-white/10 hover:bg-white/10 transition-colors"
             >
-              <Plus className="w-5 h-5 mr-2" />
-              Create Your First Session
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {sessions.slice(0, 5).map((session, index) => (
-              <motion.div
-                key={session.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="p-4 bg-white/5 rounded-xl border border-white/10 hover:bg-white/10 transition-colors"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <div className={`w-10 h-10 bg-gradient-to-br ${getSessionTypeColor(session.type)} rounded-lg flex items-center justify-center`}>
-                      <Focus className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="font-medium text-white">{session.name}</h3>
-                      <p className="text-sm text-neural-400 capitalize">{session.type.replace('_', ' ')}</p>
-                    </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className={`w-10 h-10 bg-gradient-to-br ${getSessionTypeColor(session.type)} rounded-lg flex items-center justify-center`}>
+                    <Focus className="w-5 h-5 text-white" />
                   </div>
-
-                  <div className="flex items-center space-x-6">
-                    <div className="text-right">
-                      <p className="text-sm text-neural-400">Duration</p>
-                      <p className="text-white font-medium">
-                        {session.actual_duration ? `${session.actual_duration}m` : `${session.planned_duration}m planned`}
-                      </p>
-                    </div>
-
-                    {session.focus_score && (
-                      <div className="text-right">
-                        <p className="text-sm text-neural-400">Focus Score</p>
-                        <p className="text-white font-medium">{session.focus_score}/10</p>
-                      </div>
-                    )}
-
-                    <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-                      session.status === 'completed' ? 'bg-green-500/20 text-green-300' :
-                      session.status === 'active' ? 'bg-blue-500/20 text-blue-300' :
-                      session.status === 'paused' ? 'bg-yellow-500/20 text-yellow-300' :
-                      'bg-gray-500/20 text-gray-300'
-                    }`}>
-                      {session.status}
-                    </div>
+                  <div>
+                    <h3 className="font-medium text-white">{session.name}</h3>
+                    <p className="text-sm text-neural-400 capitalize">{session.type.replace('_', ' ')}</p>
                   </div>
                 </div>
-              </motion.div>
-            ))}
-          </div>
-        )}
+
+                <div className="flex items-center space-x-6">
+                  <div className="text-right">
+                    <p className="text-sm text-neural-400">Duration</p>
+                    <p className="text-white font-medium">
+                      {session.actual_duration ? `${session.actual_duration}m` : `${session.planned_duration}m planned`}
+                    </p>
+                  </div>
+
+                  {session.focus_score && (
+                    <div className="text-right">
+                      <p className="text-sm text-neural-400">Focus Score</p>
+                      <p className="text-white font-medium">{session.focus_score}/10</p>
+                    </div>
+                  )}
+
+                  <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    session.status === 'completed' ? 'bg-green-500/20 text-green-300' :
+                    session.status === 'active' ? 'bg-blue-500/20 text-blue-300' :
+                    session.status === 'paused' ? 'bg-yellow-500/20 text-yellow-300' :
+                    'bg-gray-500/20 text-gray-300'
+                  }`}>
+                    {session.status}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
       </motion.div>
 
       {/* Create Session Modal */}
       {showCreateModal && (
         <CreateSessionModal
           onClose={() => setShowCreateModal(false)}
-          onSuccess={() => {
+          onSuccess={(newSession) => {
+            setSessions(prev => [...prev, newSession])
             setShowCreateModal(false)
-            loadSessions()
+            toast.success('Flow session created!')
           }}
         />
       )}
@@ -474,7 +469,10 @@ export default function FlowState() {
 }
 
 // Create Session Modal Component
-function CreateSessionModal({ onClose, onSuccess }: { onClose: () => void, onSuccess: () => void }) {
+function CreateSessionModal({ onClose, onSuccess }: { 
+  onClose: () => void, 
+  onSuccess: (session: FlowSession) => void 
+}) {
   const [formData, setFormData] = useState({
     name: '',
     type: 'deep_work',
@@ -498,27 +496,24 @@ function CreateSessionModal({ onClose, onSuccess }: { onClose: () => void, onSuc
     if (!formData.name.trim()) return
 
     setIsSubmitting(true)
-    try {
-      const sessionData = {
-        ...formData,
-        metrics: {
-          focus_intervals: [],
-          screen_time_distribution: {},
-          app_usage: {}
-        }
+    
+    // Simulate API call
+    setTimeout(() => {
+      const newSession: FlowSession = {
+        id: Date.now().toString(),
+        name: formData.name,
+        type: formData.type,
+        planned_duration: formData.planned_duration,
+        start_time: new Date().toISOString(),
+        status: 'planned',
+        distraction_count: 0,
+        environment_settings: formData.environment_settings,
+        created_at: new Date().toISOString()
       }
-
-      const response = await flowStateAPI.createFlowSession(sessionData)
-      if (response.success) {
-        toast.success('Flow session created successfully!')
-        onSuccess()
-      }
-    } catch (error) {
-      console.error('Failed to create session:', error)
-      toast.error('Failed to create session')
-    } finally {
+      
+      onSuccess(newSession)
       setIsSubmitting(false)
-    }
+    }, 1000)
   }
 
   return (

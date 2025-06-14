@@ -23,21 +23,11 @@ import LifeAnalytics from './pages/LifeAnalytics'
 import NotionIntegration from './pages/NotionIntegration'
 
 // Providers
-import { AuthProvider, useAuth } from './contexts/AuthContext'
+import { AuthProvider } from './contexts/AuthContext'
 import { AIProvider } from './contexts/AIContext'
 import { NotionProvider } from './contexts/NotionContext'
 
 function AppContent() {
-  const { loading } = useAuth()
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-neural-900 via-neural-800 to-quantum-900 flex items-center justify-center">
-        <LoadingSpinner size="lg" text="Initializing GalyarderOS..." />
-      </div>
-    )
-  }
-
   return (
     <Router>
       <div className="min-h-screen bg-gradient-to-br from-neural-900 via-neural-800 to-quantum-900">

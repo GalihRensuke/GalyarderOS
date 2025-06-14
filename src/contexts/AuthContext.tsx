@@ -1,10 +1,31 @@
-import React, { createContext, useContext, useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
-import { databaseService, type UserProfile, type UserPreferences } from '@/services/database'
-import type { User } from '@supabase/supabase-js'
+import React, { createContext, useContext, useState } from 'react'
+
+interface UserProfile {
+  id: string
+  email: string
+  full_name?: string
+  avatar_url?: string
+  timezone?: string
+  level?: number
+  experience_points?: number
+  optimization_score?: number
+  created_at?: string
+  updated_at?: string
+}
+
+interface UserPreferences {
+  id: string
+  user_id: string
+  theme?: 'dark' | 'light' | 'auto'
+  ai_personality?: string
+  notification_settings?: any
+  privacy_settings?: any
+  created_at?: string
+  updated_at?: string
+}
 
 interface AuthContextType {
-  user: User | null
+  user: any | null
   profile: UserProfile | null
   preferences: UserPreferences | null
   loading: boolean
@@ -18,95 +39,30 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [profile, setProfile] = useState<UserProfile | null>(null)
-  const [preferences, setPreferences] = useState<UserPreferences | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        initializeUserData(session.user)
-      } else {
-        setLoading(false)
-      }
-    })
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setUser(session?.user ?? null)
-        
-        if (session?.user) {
-          await initializeUserData(session.user)
-        } else {
-          setProfile(null)
-          setPreferences(null)
-          setLoading(false)
-        }
-      }
-    )
-
-    return () => subscription.unsubscribe()
-  }, [])
-
-  const initializeUserData = async (user: User) => {
-    try {
-      const { profile, preferences } = await databaseService.initializeUser(user)
-      setProfile(profile)
-      setPreferences(preferences)
-      
-      // Set up real-time subscriptions
-      if (profile) {
-        databaseService.subscribeToUserProfile(user.id, setProfile)
-        databaseService.subscribeToUserPreferences(user.id, setPreferences)
-      }
-    } catch (error) {
-      console.error('Failed to initialize user data:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
+  // Mock user data for development
+  const [user] = useState(null)
+  const [profile] = useState<UserProfile | null>(null)
+  const [preferences] = useState<UserPreferences | null>(null)
+  const [loading] = useState(false)
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
-    if (error) throw error
+    console.log('Sign in with:', email, password)
   }
 
   const signUp = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-    })
-    if (error) throw error
+    console.log('Sign up with:', email, password)
   }
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut()
-    if (error) throw error
+    console.log('Sign out')
   }
 
   const updateProfile = async (updates: Partial<UserProfile>) => {
-    if (!user) throw new Error('No user logged in')
-    
-    const updatedProfile = await databaseService.updateUserProfile(user.id, updates)
-    if (updatedProfile) {
-      setProfile(updatedProfile)
-    }
+    console.log('Update profile:', updates)
   }
 
   const updatePreferences = async (updates: Partial<UserPreferences>) => {
-    if (!user) throw new Error('No user logged in')
-    
-    const updatedPreferences = await databaseService.updateUserPreferences(user.id, updates)
-    if (updatedPreferences) {
-      setPreferences(updatedPreferences)
-    }
+    console.log('Update preferences:', updates)
   }
 
   const value = {

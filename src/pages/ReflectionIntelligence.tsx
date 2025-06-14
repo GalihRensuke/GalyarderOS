@@ -15,8 +15,6 @@ import {
   Clock,
   Filter
 } from 'lucide-react'
-import { reflectionIntelligenceAPI } from '@/services/api'
-import { useAuth } from '@/contexts/AuthContext'
 import toast from 'react-hot-toast'
 
 interface ReflectionEntry {
@@ -37,49 +35,81 @@ interface ReflectionEntry {
   created_at: string
 }
 
+// Mock data
+const mockEntries: ReflectionEntry[] = [
+  {
+    id: '1',
+    title: 'Daily Reflection - January 15th',
+    content: 'Today was a productive day. I managed to complete all my planned tasks and even had time for a workout. The morning meditation really helped set a positive tone for the day.',
+    type: 'daily',
+    mood_score: 8,
+    energy_score: 7,
+    satisfaction_score: 9,
+    stress_level: 3,
+    key_insights: ['Morning routine significantly impacts my productivity', 'Exercise boosts my energy levels'],
+    action_items: ['Continue morning meditation', 'Schedule workouts consistently'],
+    gratitude_items: ['Good health', 'Supportive family', 'Meaningful work'],
+    challenges_faced: ['Time management in the afternoon'],
+    wins_celebrated: ['Completed all planned tasks', 'Maintained workout routine'],
+    tags: ['productivity', 'wellness', 'routine'],
+    created_at: '2024-01-15T20:00:00Z'
+  },
+  {
+    id: '2',
+    title: 'Weekly Review - Week 2',
+    content: 'This week showed great progress in establishing consistent habits. The new morning routine is becoming more natural, and I\'m seeing improvements in focus and energy.',
+    type: 'weekly',
+    mood_score: 7,
+    energy_score: 8,
+    satisfaction_score: 8,
+    stress_level: 4,
+    key_insights: ['Consistency in small habits leads to big changes', 'Sleep quality affects everything'],
+    action_items: ['Optimize sleep schedule', 'Add evening wind-down routine'],
+    gratitude_items: ['Progress made this week', 'Learning opportunities'],
+    challenges_faced: ['Maintaining energy in the evening', 'Social media distractions'],
+    wins_celebrated: ['7-day meditation streak', 'Improved sleep quality'],
+    tags: ['habits', 'progress', 'reflection'],
+    created_at: '2024-01-14T19:30:00Z'
+  },
+  {
+    id: '3',
+    title: 'Creative Breakthrough',
+    content: 'Had an amazing creative session today. The ideas were flowing, and I made significant progress on my project. This reminded me of the importance of creating space for creativity.',
+    type: 'spontaneous',
+    mood_score: 9,
+    energy_score: 9,
+    satisfaction_score: 10,
+    stress_level: 2,
+    key_insights: ['Creativity needs unstructured time', 'Environment affects creative output'],
+    action_items: ['Block creative time in calendar', 'Optimize workspace for creativity'],
+    gratitude_items: ['Creative abilities', 'Inspiring environment'],
+    challenges_faced: [],
+    wins_celebrated: ['Major project breakthrough', 'Flow state achieved'],
+    tags: ['creativity', 'flow', 'breakthrough'],
+    created_at: '2024-01-13T16:45:00Z'
+  }
+]
+
+const mockAnalytics = {
+  total_entries: 28,
+  consistency_score: 93,
+  average_mood: 7.2,
+  mood_trend: 'improving' as const,
+  common_themes: ['productivity', 'health', 'relationships', 'creativity'],
+  growth_areas: ['time management', 'stress reduction', 'work-life balance']
+}
+
 export default function ReflectionIntelligence() {
-  const { user } = useAuth()
-  const [entries, setEntries] = useState<ReflectionEntry[]>([])
-  const [loading, setLoading] = useState(true)
+  const [entries, setEntries] = useState<ReflectionEntry[]>(mockEntries)
+  const [loading, setLoading] = useState(false)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [selectedEntry, setSelectedEntry] = useState<ReflectionEntry | null>(null)
-  const [analytics, setAnalytics] = useState<any>(null)
+  const [analytics] = useState(mockAnalytics)
   const [selectedType, setSelectedType] = useState('all')
 
-  useEffect(() => {
-    if (user) {
-      loadEntries()
-      loadAnalytics()
-    }
-  }, [user, selectedType])
-
-  const loadEntries = async () => {
-    try {
-      const filters: any = {}
-      if (selectedType !== 'all') filters.type = selectedType
-
-      const response = await reflectionIntelligenceAPI.getReflectionEntries(1, 20, filters)
-      if (response.success && response.data) {
-        setEntries(response.data)
-      }
-    } catch (error) {
-      console.error('Failed to load reflection entries:', error)
-      toast.error('Failed to load reflections')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const loadAnalytics = async () => {
-    try {
-      const response = await reflectionIntelligenceAPI.getReflectionAnalytics('30d')
-      if (response.success) {
-        setAnalytics(response.data)
-      }
-    } catch (error) {
-      console.error('Failed to load analytics:', error)
-    }
-  }
+  const filteredEntries = entries.filter(entry => 
+    selectedType === 'all' || entry.type === selectedType
+  )
 
   const getTypeColor = (type: string) => {
     const colors: { [key: string]: string } = {
@@ -97,28 +127,6 @@ export default function ReflectionIntelligence() {
     if (score >= 6) return 'text-yellow-400'
     if (score >= 4) return 'text-orange-400'
     return 'text-red-400'
-  }
-
-  if (!user) {
-    return (
-      <div className="max-w-4xl mx-auto">
-        <div className="neural-card text-center">
-          <h1 className="text-2xl font-bold text-white mb-4">Please sign in to access Reflection Intelligence</h1>
-          <p className="text-neural-300">Track your personal growth with AI-powered reflection insights.</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (loading) {
-    return (
-      <div className="max-w-4xl mx-auto">
-        <div className="neural-card text-center">
-          <div className="w-16 h-16 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-neural-300">Loading your reflections...</p>
-        </div>
-      </div>
-    )
   }
 
   return (
@@ -152,85 +160,81 @@ export default function ReflectionIntelligence() {
       </motion.div>
 
       {/* Analytics Overview */}
-      {analytics && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="neural-card"
-        >
-          <div className="flex items-center space-x-3 mb-6">
-            <Brain className="w-6 h-6 text-primary-400" />
-            <h2 className="text-xl font-bold text-white">30-Day Reflection Analytics</h2>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="neural-card"
+      >
+        <div className="flex items-center space-x-3 mb-6">
+          <Brain className="w-6 h-6 text-primary-400" />
+          <h2 className="text-xl font-bold text-white">30-Day Reflection Analytics</h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+          <div className="p-4 bg-white/5 rounded-xl">
+            <h3 className="font-medium text-white mb-2">Total Entries</h3>
+            <p className="text-2xl font-bold text-blue-400">{analytics.total_entries}</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-            <div className="p-4 bg-white/5 rounded-xl">
-              <h3 className="font-medium text-white mb-2">Total Entries</h3>
-              <p className="text-2xl font-bold text-blue-400">{analytics.total_entries}</p>
-            </div>
+          <div className="p-4 bg-white/5 rounded-xl">
+            <h3 className="font-medium text-white mb-2">Consistency</h3>
+            <p className="text-2xl font-bold text-green-400">{Math.round(analytics.consistency_score)}%</p>
+          </div>
 
-            <div className="p-4 bg-white/5 rounded-xl">
-              <h3 className="font-medium text-white mb-2">Consistency</h3>
-              <p className="text-2xl font-bold text-green-400">{Math.round(analytics.consistency_score)}%</p>
-            </div>
+          <div className="p-4 bg-white/5 rounded-xl">
+            <h3 className="font-medium text-white mb-2">Avg Mood</h3>
+            <p className={`text-2xl font-bold ${getMoodColor(analytics.average_mood)}`}>
+              {analytics.average_mood.toFixed(1)}/10
+            </p>
+          </div>
 
-            <div className="p-4 bg-white/5 rounded-xl">
-              <h3 className="font-medium text-white mb-2">Avg Mood</h3>
-              <p className={`text-2xl font-bold ${getMoodColor(analytics.average_mood)}`}>
-                {analytics.average_mood.toFixed(1)}/10
-              </p>
+          <div className="p-4 bg-white/5 rounded-xl">
+            <h3 className="font-medium text-white mb-2">Mood Trend</h3>
+            <div className="flex items-center space-x-2">
+              {analytics.mood_trend === 'improving' && <TrendingUp className="w-5 h-5 text-green-400" />}
+              {analytics.mood_trend === 'declining' && <TrendingUp className="w-5 h-5 text-red-400 rotate-180" />}
+              {analytics.mood_trend === 'stable' && <div className="w-5 h-5 bg-yellow-400 rounded-full" />}
+              <span className={`font-bold capitalize ${
+                analytics.mood_trend === 'improving' ? 'text-green-400' :
+                analytics.mood_trend === 'declining' ? 'text-red-400' :
+                'text-yellow-400'
+              }`}>
+                {analytics.mood_tren}
+              </span>
             </div>
+          </div>
+        </div>
 
-            <div className="p-4 bg-white/5 rounded-xl">
-              <h3 className="font-medium text-white mb-2">Mood Trend</h3>
-              <div className="flex items-center space-x-2">
-                {analytics.mood_trend === 'improving' && <TrendingUp className="w-5 h-5 text-green-400" />}
-                {analytics.mood_trend === 'declining' && <TrendingUp className="w-5 h-5 text-red-400 rotate-180" />}
-                {analytics.mood_trend === 'stable' && <div className="w-5 h-5 bg-yellow-400 rounded-full" />}
-                <span className={`font-bold capitalize ${
-                  analytics.mood_trend === 'improving' ? 'text-green-400' :
-                  analytics.mood_trend === 'declining' ? 'text-red-400' :
-                  'text-yellow-400'
-                }`}>
-                  {analytics.mood_trend}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <h3 className="font-medium text-white mb-3">Common Themes</h3>
+            <div className="flex flex-wrap gap-2">
+              {analytics.common_themes.map((theme, index) => (
+                <span
+                  key={index}
+                  className="px-3 py-1 bg-blue-500/20 text-blue-300 rounded-full text-sm"
+                >
+                  {theme}
                 </span>
-              </div>
+              ))}
             </div>
           </div>
 
-          {analytics.common_themes && analytics.common_themes.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <h3 className="font-medium text-white mb-3">Common Themes</h3>
-                <div className="flex flex-wrap gap-2">
-                  {analytics.common_themes.slice(0, 8).map((theme: string, index: number) => (
-                    <span
-                      key={index}
-                      className="px-3 py-1 bg-blue-500/20 text-blue-300 rounded-full text-sm"
-                    >
-                      {theme}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <h3 className="font-medium text-white mb-3">Growth Areas</h3>
-                <div className="flex flex-wrap gap-2">
-                  {analytics.growth_areas.slice(0, 8).map((area: string, index: number) => (
-                    <span
-                      key={index}
-                      className="px-3 py-1 bg-green-500/20 text-green-300 rounded-full text-sm"
-                    >
-                      {area}
-                    </span>
-                  ))}
-                </div>
-              </div>
+          <div>
+            <h3 className="font-medium text-white mb-3">Growth Areas</h3>
+            <div className="flex flex-wrap gap-2">
+              {analytics.growth_areas.map((area, index) => (
+                <span
+                  key={index}
+                  className="px-3 py-1 bg-green-500/20 text-green-300 rounded-full text-sm"
+                >
+                  {area}
+                </span>
+              ))}
             </div>
-          )}
-        </motion.div>
-      )}
+          </div>
+        </div>
+      </motion.div>
 
       {/* Filter */}
       <motion.div
@@ -259,159 +263,140 @@ export default function ReflectionIntelligence() {
       </motion.div>
 
       {/* Reflection Entries */}
-      {entries.length === 0 ? (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="neural-card text-center py-12"
-        >
-          <Mirror className="w-16 h-16 text-neural-600 mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-white mb-2">No reflections yet</h3>
-          <p className="text-neural-400 mb-6">Start your reflection journey to gain deeper insights into your personal growth</p>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="quantum-button"
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredEntries.map((entry, index) => (
+          <motion.div
+            key={entry.id}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.1 }}
+            className="neural-card group hover:scale-105 transition-all cursor-pointer"
+            onClick={() => setSelectedEntry(entry)}
           >
-            <Plus className="w-5 h-5 mr-2" />
-            Write Your First Reflection
-          </button>
-        </motion.div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {entries.map((entry, index) => (
-            <motion.div
-              key={entry.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="neural-card group hover:scale-105 transition-all cursor-pointer"
-              onClick={() => setSelectedEntry(entry)}
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className={`w-12 h-12 bg-gradient-to-br ${getTypeColor(entry.type)} rounded-xl flex items-center justify-center`}>
-                  <Mirror className="w-6 h-6 text-white" />
-                </div>
-                <div className="text-right">
-                  <div className="flex items-center space-x-1 text-xs text-neural-400">
-                    <Calendar className="w-3 h-3" />
-                    <span>{new Date(entry.created_at).toLocaleDateString()}</span>
-                  </div>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${
-                    entry.type === 'daily' ? 'bg-blue-500/20 text-blue-300' :
-                    entry.type === 'weekly' ? 'bg-green-500/20 text-green-300' :
-                    entry.type === 'monthly' ? 'bg-purple-500/20 text-purple-300' :
-                    'bg-orange-500/20 text-orange-300'
-                  }`}>
-                    {entry.type}
-                  </span>
-                </div>
+            <div className="flex items-start justify-between mb-4">
+              <div className={`w-12 h-12 bg-gradient-to-br ${getTypeColor(entry.type)} rounded-xl flex items-center justify-center`}>
+                <Mirror className="w-6 h-6 text-white" />
               </div>
+              <div className="text-right">
+                <div className="flex items-center space-x-1 text-xs text-neural-400">
+                  <Calendar className="w-3 h-3" />
+                  <span>{new Date(entry.created_at).toLocaleDateString()}</span>
+                </div>
+                <span className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${
+                  entry.type === 'daily' ? 'bg-blue-500/20 text-blue-300' :
+                  entry.type === 'weekly' ? 'bg-green-500/20 text-green-300' :
+                  entry.type === 'monthly' ? 'bg-purple-500/20 text-purple-300' :
+                  'bg-orange-500/20 text-orange-300'
+                }`}>
+                  {entry.type}
+                </span>
+              </div>
+            </div>
 
-              <h3 className="text-lg font-bold text-white mb-2 line-clamp-2">{entry.title}</h3>
-              <p className="text-neural-300 text-sm mb-4 line-clamp-3">{entry.content}</p>
+            <h3 className="text-lg font-bold text-white mb-2 line-clamp-2">{entry.title}</h3>
+            <p className="text-neural-300 text-sm mb-4 line-clamp-3">{entry.content}</p>
 
-              <div className="space-y-3">
-                {(entry.mood_score || entry.energy_score || entry.satisfaction_score) && (
-                  <div className="grid grid-cols-3 gap-2 text-xs">
-                    {entry.mood_score && (
-                      <div className="text-center">
-                        <Heart className="w-4 h-4 mx-auto mb-1 text-pink-400" />
-                        <p className="text-neural-400">Mood</p>
-                        <p className={`font-bold ${getMoodColor(entry.mood_score)}`}>{entry.mood_score}</p>
-                      </div>
-                    )}
-                    {entry.energy_score && (
-                      <div className="text-center">
-                        <Zap className="w-4 h-4 mx-auto mb-1 text-yellow-400" />
-                        <p className="text-neural-400">Energy</p>
-                        <p className={`font-bold ${getMoodColor(entry.energy_score)}`}>{entry.energy_score}</p>
-                      </div>
-                    )}
-                    {entry.satisfaction_score && (
-                      <div className="text-center">
-                        <Star className="w-4 h-4 mx-auto mb-1 text-purple-400" />
-                        <p className="text-neural-400">Satisfaction</p>
-                        <p className={`font-bold ${getMoodColor(entry.satisfaction_score)}`}>{entry.satisfaction_score}</p>
-                      </div>
-                    )}
+            <div className="space-y-3">
+              {(entry.mood_score || entry.energy_score || entry.satisfaction_score) && (
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  {entry.mood_score && (
+                    <div className="text-center">
+                      <Heart className="w-4 h-4 mx-auto mb-1 text-pink-400" />
+                      <p className="text-neural-400">Mood</p>
+                      <p className={`font-bold ${getMoodColor(entry.mood_score)}`}>{entry.mood_score}</p>
+                    </div>
+                  )}
+                  {entry.energy_score && (
+                    <div className="text-center">
+                      <Zap className="w-4 h-4 mx-auto mb-1 text-yellow-400" />
+                      <p className="text-neural-400">Energy</p>
+                      <p className={`font-bold ${getMoodColor(entry.energy_score)}`}>{entry.energy_score}</p>
+                    </div>
+                  )}
+                  {entry.satisfaction_score && (
+                    <div className="text-center">
+                      <Star className="w-4 h-4 mx-auto mb-1 text-purple-400" />
+                      <p className="text-neural-400">Satisfaction</p>
+                      <p className={`font-bold ${getMoodColor(entry.satisfaction_score)}`}>{entry.satisfaction_score}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="space-y-2">
+                {entry.key_insights.length > 0 && (
+                  <div>
+                    <div className="flex items-center space-x-2 mb-1">
+                      <Lightbulb className="w-3 h-3 text-yellow-400" />
+                      <span className="text-xs text-neural-400">Insights ({entry.key_insights.length})</span>
+                    </div>
+                    <p className="text-xs text-neural-300 line-clamp-2">
+                      {entry.key_insights[0]}
+                    </p>
                   </div>
                 )}
 
-                <div className="space-y-2">
-                  {entry.key_insights.length > 0 && (
-                    <div>
-                      <div className="flex items-center space-x-2 mb-1">
-                        <Lightbulb className="w-3 h-3 text-yellow-400" />
-                        <span className="text-xs text-neural-400">Insights ({entry.key_insights.length})</span>
-                      </div>
-                      <p className="text-xs text-neural-300 line-clamp-2">
-                        {entry.key_insights[0]}
-                      </p>
+                {entry.action_items.length > 0 && (
+                  <div>
+                    <div className="flex items-center space-x-2 mb-1">
+                      <Target className="w-3 h-3 text-green-400" />
+                      <span className="text-xs text-neural-400">Actions ({entry.action_items.length})</span>
                     </div>
-                  )}
+                    <p className="text-xs text-neural-300 line-clamp-2">
+                      {entry.action_items[0]}
+                    </p>
+                  </div>
+                )}
 
-                  {entry.action_items.length > 0 && (
-                    <div>
-                      <div className="flex items-center space-x-2 mb-1">
-                        <Target className="w-3 h-3 text-green-400" />
-                        <span className="text-xs text-neural-400">Actions ({entry.action_items.length})</span>
-                      </div>
-                      <p className="text-xs text-neural-300 line-clamp-2">
-                        {entry.action_items[0]}
-                      </p>
+                {entry.wins_celebrated.length > 0 && (
+                  <div>
+                    <div className="flex items-center space-x-2 mb-1">
+                      <Star className="w-3 h-3 text-purple-400" />
+                      <span className="text-xs text-neural-400">Wins ({entry.wins_celebrated.length})</span>
                     </div>
-                  )}
+                    <p className="text-xs text-neural-300 line-clamp-2">
+                      {entry.wins_celebrated[0]}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
 
-                  {entry.wins_celebrated.length > 0 && (
-                    <div>
-                      <div className="flex items-center space-x-2 mb-1">
-                        <Star className="w-3 h-3 text-purple-400" />
-                        <span className="text-xs text-neural-400">Wins ({entry.wins_celebrated.length})</span>
-                      </div>
-                      <p className="text-xs text-neural-300 line-clamp-2">
-                        {entry.wins_celebrated[0]}
-                      </p>
-                    </div>
+            <div className="mt-6 pt-4 border-t border-white/10">
+              <div className="flex items-center justify-between">
+                <div className="flex space-x-2">
+                  {entry.tags.slice(0, 2).map((tag, i) => (
+                    <span
+                      key={i}
+                      className="px-2 py-1 bg-white/10 text-neural-300 rounded-full text-xs"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                  {entry.tags.length > 2 && (
+                    <span className="px-2 py-1 bg-white/10 text-neural-300 rounded-full text-xs">
+                      +{entry.tags.length - 2}
+                    </span>
                   )}
                 </div>
-              </div>
-
-              <div className="mt-6 pt-4 border-t border-white/10">
-                <div className="flex items-center justify-between">
-                  <div className="flex space-x-2">
-                    {entry.tags.slice(0, 2).map((tag, i) => (
-                      <span
-                        key={i}
-                        className="px-2 py-1 bg-white/10 text-neural-300 rounded-full text-xs"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                    {entry.tags.length > 2 && (
-                      <span className="px-2 py-1 bg-white/10 text-neural-300 rounded-full text-xs">
-                        +{entry.tags.length - 2}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center space-x-1 text-xs text-neural-400">
-                    <Clock className="w-3 h-3" />
-                    <span>{new Date(entry.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                  </div>
+                <div className="flex items-center space-x-1 text-xs text-neural-400">
+                  <Clock className="w-3 h-3" />
+                  <span>{new Date(entry.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
               </div>
-            </motion.div>
-          ))}
-        </div>
-      )}
+            </div>
+          </motion.div>
+        ))}
+      </div>
 
       {/* Create Reflection Modal */}
       {showCreateModal && (
         <CreateReflectionModal
           onClose={() => setShowCreateModal(false)}
-          onSuccess={() => {
+          onSuccess={(newEntry) => {
+            setEntries(prev => [newEntry, ...prev])
             setShowCreateModal(false)
-            loadEntries()
-            loadAnalytics()
+            toast.success('Reflection created successfully!')
           }}
         />
       )}
@@ -421,9 +406,8 @@ export default function ReflectionIntelligence() {
         <ReflectionDetailModal
           entry={selectedEntry}
           onClose={() => setSelectedEntry(null)}
-          onUpdate={() => {
-            loadEntries()
-            loadAnalytics()
+          onUpdate={(updatedEntry) => {
+            setEntries(prev => prev.map(e => e.id === updatedEntry.id ? updatedEntry : e))
           }}
         />
       )}
@@ -432,7 +416,10 @@ export default function ReflectionIntelligence() {
 }
 
 // Create Reflection Modal Component
-function CreateReflectionModal({ onClose, onSuccess }: { onClose: () => void, onSuccess: () => void }) {
+function CreateReflectionModal({ onClose, onSuccess }: { 
+  onClose: () => void, 
+  onSuccess: (entry: ReflectionEntry) => void 
+}) {
   const [formData, setFormData] = useState({
     title: '',
     content: '',
@@ -461,18 +448,30 @@ function CreateReflectionModal({ onClose, onSuccess }: { onClose: () => void, on
     if (!formData.title.trim() || !formData.content.trim()) return
 
     setIsSubmitting(true)
-    try {
-      const response = await reflectionIntelligenceAPI.createReflectionEntry(formData)
-      if (response.success) {
-        toast.success('Reflection created successfully!')
-        onSuccess()
+    
+    // Simulate API call
+    setTimeout(() => {
+      const newEntry: ReflectionEntry = {
+        id: Date.now().toString(),
+        title: formData.title,
+        content: formData.content,
+        type: formData.type,
+        mood_score: formData.mood_score,
+        energy_score: formData.energy_score,
+        satisfaction_score: formData.satisfaction_score,
+        stress_level: formData.stress_level,
+        key_insights: formData.key_insights,
+        action_items: formData.action_items,
+        gratitude_items: formData.gratitude_items,
+        challenges_faced: formData.challenges_faced,
+        wins_celebrated: formData.wins_celebrated,
+        tags: formData.tags,
+        created_at: new Date().toISOString()
       }
-    } catch (error) {
-      console.error('Failed to create reflection:', error)
-      toast.error('Failed to create reflection')
-    } finally {
+      
+      onSuccess(newEntry)
       setIsSubmitting(false)
-    }
+    }, 1000)
   }
 
   const addItem = (type: string, value: string, setter: (value: string) => void) => {
@@ -658,7 +657,7 @@ function CreateReflectionModal({ onClose, onSuccess }: { onClose: () => void, on
 function ReflectionDetailModal({ entry, onClose, onUpdate }: { 
   entry: ReflectionEntry, 
   onClose: () => void, 
-  onUpdate: () => void 
+  onUpdate: (entry: ReflectionEntry) => void 
 }) {
   const getMoodColor = (score?: number) => {
     if (!score) return 'text-gray-400'
@@ -824,6 +823,18 @@ function ReflectionDetailModal({ entry, onClose, onUpdate }: {
                 </div>
               </div>
             )}
+
+            <div className="p-4 bg-white/5 rounded-xl">
+              <h3 className="font-semibold text-white mb-3">AI Insights</h3>
+              <div className="p-3 bg-primary-500/10 border border-primary-500/20 rounded-lg mb-3">
+                <p className="text-primary-300 font-medium mb-1">Pattern Detected</p>
+                <p className="text-neural-200 text-sm">Your energy levels are consistently higher when you mention exercise in your reflections.</p>
+              </div>
+              <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                <p className="text-green-300 font-medium mb-1">Recommendation</p>
+                <p className="text-neural-200 text-sm">Consider scheduling exercise earlier in the day to maintain higher energy levels throughout.</p>
+              </div>
+            </div>
 
             <div className="p-4 bg-white/5 rounded-xl">
               <h3 className="font-semibold text-white mb-3">Actions</h3>

@@ -17,8 +17,6 @@ import {
   Award,
   Flame
 } from 'lucide-react'
-import { ritualEngineAPI } from '@/services/api'
-import { useAuth } from '@/contexts/AuthContext'
 import toast from 'react-hot-toast'
 
 interface Ritual {
@@ -38,59 +36,99 @@ interface Ritual {
   created_at: string
 }
 
+// Mock data
+const mockRituals: Ritual[] = [
+  {
+    id: '1',
+    name: 'Morning Meditation',
+    description: 'Start the day with 20 minutes of mindfulness meditation',
+    category: 'mindfulness',
+    type: 'habit',
+    frequency: 'daily',
+    duration_minutes: 20,
+    streak_count: 15,
+    best_streak: 28,
+    total_completions: 45,
+    difficulty_level: 3,
+    tags: ['meditation', 'mindfulness', 'morning'],
+    is_active: true,
+    created_at: '2024-01-01T00:00:00Z'
+  },
+  {
+    id: '2',
+    name: 'Evening Workout',
+    description: 'High-intensity interval training session',
+    category: 'health',
+    type: 'routine',
+    frequency: 'daily',
+    duration_minutes: 45,
+    streak_count: 8,
+    best_streak: 21,
+    total_completions: 32,
+    difficulty_level: 4,
+    tags: ['fitness', 'health', 'evening'],
+    is_active: true,
+    created_at: '2024-01-15T00:00:00Z'
+  },
+  {
+    id: '3',
+    name: 'Weekly Planning',
+    description: 'Review goals and plan the upcoming week',
+    category: 'work',
+    type: 'sequence',
+    frequency: 'weekly',
+    duration_minutes: 60,
+    streak_count: 4,
+    best_streak: 12,
+    total_completions: 16,
+    difficulty_level: 2,
+    tags: ['planning', 'productivity', 'goals'],
+    is_active: true,
+    created_at: '2024-02-01T00:00:00Z'
+  },
+  {
+    id: '4',
+    name: 'Reading Session',
+    description: 'Daily reading for personal development',
+    category: 'learning',
+    type: 'habit',
+    frequency: 'daily',
+    duration_minutes: 30,
+    streak_count: 22,
+    best_streak: 35,
+    total_completions: 67,
+    difficulty_level: 2,
+    tags: ['reading', 'learning', 'development'],
+    is_active: true,
+    created_at: '2024-01-10T00:00:00Z'
+  }
+]
+
 export default function RitualEngine() {
-  const { user } = useAuth()
-  const [rituals, setRituals] = useState<Ritual[]>([])
-  const [loading, setLoading] = useState(true)
+  const [rituals, setRituals] = useState<Ritual[]>(mockRituals)
+  const [loading, setLoading] = useState(false)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [selectedRitual, setSelectedRitual] = useState<Ritual | null>(null)
   const [completingRitual, setCompletingRitual] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (user) {
-      loadRituals()
-    }
-  }, [user])
-
-  const loadRituals = async () => {
-    try {
-      const response = await ritualEngineAPI.getRituals(1, 20)
-      if (response.success && response.data) {
-        setRituals(response.data)
-      }
-    } catch (error) {
-      console.error('Failed to load rituals:', error)
-      toast.error('Failed to load rituals')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const handleCompleteRitual = async (ritualId: string) => {
     setCompletingRitual(ritualId)
-    try {
-      const completionData = {
-        duration_minutes: 20,
-        mood_before: 6,
-        mood_after: 8,
-        energy_before: 5,
-        energy_after: 7,
-        notes: 'Completed successfully',
-        completed_steps: [],
-        skipped_steps: []
-      }
-
-      const response = await ritualEngineAPI.completeRitual(ritualId, completionData)
-      if (response.success) {
-        toast.success('Ritual completed! 🎉')
-        loadRituals() // Reload to update streak counts
-      }
-    } catch (error) {
-      console.error('Failed to complete ritual:', error)
-      toast.error('Failed to complete ritual')
-    } finally {
+    
+    // Simulate API call
+    setTimeout(() => {
+      setRituals(prev => prev.map(ritual => 
+        ritual.id === ritualId 
+          ? { 
+              ...ritual, 
+              streak_count: ritual.streak_count + 1,
+              total_completions: ritual.total_completions + 1,
+              best_streak: Math.max(ritual.best_streak, ritual.streak_count + 1)
+            }
+          : ritual
+      ))
       setCompletingRitual(null)
-    }
+      toast.success('Ritual completed! 🎉')
+    }, 1000)
   }
 
   const getCategoryColor = (category: string) => {
@@ -100,6 +138,7 @@ export default function RitualEngine() {
       'work': 'from-blue-500 to-cyan-500',
       'health': 'from-green-500 to-emerald-500',
       'mindfulness': 'from-pink-500 to-rose-500',
+      'learning': 'from-indigo-500 to-purple-500',
       'custom': 'from-gray-500 to-slate-500'
     }
     return colors[category] || 'from-gray-500 to-slate-500'
@@ -114,28 +153,6 @@ export default function RitualEngine() {
         }`}
       />
     ))
-  }
-
-  if (!user) {
-    return (
-      <div className="max-w-4xl mx-auto">
-        <div className="neural-card text-center">
-          <h1 className="text-2xl font-bold text-white mb-4">Please sign in to access Ritual Engine</h1>
-          <p className="text-neural-300">Track your habits and build powerful daily rituals.</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (loading) {
-    return (
-      <div className="max-w-4xl mx-auto">
-        <div className="neural-card text-center">
-          <div className="w-16 h-16 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-neural-300">Loading your rituals...</p>
-        </div>
-      </div>
-    )
   }
 
   return (
@@ -217,126 +234,108 @@ export default function RitualEngine() {
       </div>
 
       {/* Rituals Grid */}
-      {rituals.length === 0 ? (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="neural-card text-center py-12"
-        >
-          <Zap className="w-16 h-16 text-neural-600 mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-white mb-2">No rituals yet</h3>
-          <p className="text-neural-400 mb-6">Create your first ritual to start building powerful habits</p>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="quantum-button"
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {rituals.map((ritual, index) => (
+          <motion.div
+            key={ritual.id}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.1 }}
+            className="neural-card group hover:scale-105 transition-all cursor-pointer"
+            onClick={() => setSelectedRitual(ritual)}
           >
-            <Plus className="w-5 h-5 mr-2" />
-            Create Your First Ritual
-          </button>
-        </motion.div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {rituals.map((ritual, index) => (
-            <motion.div
-              key={ritual.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="neural-card group hover:scale-105 transition-all cursor-pointer"
-              onClick={() => setSelectedRitual(ritual)}
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className={`w-12 h-12 bg-gradient-to-br ${getCategoryColor(ritual.category)} rounded-xl flex items-center justify-center`}>
-                  <Zap className="w-6 h-6 text-white" />
+            <div className="flex items-start justify-between mb-4">
+              <div className={`w-12 h-12 bg-gradient-to-br ${getCategoryColor(ritual.category)} rounded-xl flex items-center justify-center`}>
+                <Zap className="w-6 h-6 text-white" />
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="flex space-x-1">
+                  {getDifficultyStars(ritual.difficulty_level)}
                 </div>
-                <div className="flex items-center space-x-2">
-                  <div className="flex space-x-1">
-                    {getDifficultyStars(ritual.difficulty_level)}
-                  </div>
-                  <button className="p-1 rounded-lg hover:bg-white/10 transition-colors">
-                    <MoreVertical className="w-4 h-4 text-neural-400" />
-                  </button>
+                <button className="p-1 rounded-lg hover:bg-white/10 transition-colors">
+                  <MoreVertical className="w-4 h-4 text-neural-400" />
+                </button>
+              </div>
+            </div>
+
+            <h3 className="text-lg font-bold text-white mb-2">{ritual.name}</h3>
+            {ritual.description && (
+              <p className="text-neural-300 text-sm mb-4 line-clamp-2">{ritual.description}</p>
+            )}
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-neural-400">Current Streak</span>
+                <div className="flex items-center space-x-1">
+                  <Flame className="w-4 h-4 text-orange-400" />
+                  <span className="text-white font-medium">{ritual.streak_count} days</span>
                 </div>
               </div>
 
-              <h3 className="text-lg font-bold text-white mb-2">{ritual.name}</h3>
-              {ritual.description && (
-                <p className="text-neural-300 text-sm mb-4 line-clamp-2">{ritual.description}</p>
-              )}
-
-              <div className="space-y-3">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-neural-400">Current Streak</span>
-                  <div className="flex items-center space-x-1">
-                    <Flame className="w-4 h-4 text-orange-400" />
-                    <span className="text-white font-medium">{ritual.streak_count} days</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-neural-400">Best Streak</span>
-                  <span className="text-white font-medium">{ritual.best_streak} days</span>
-                </div>
-
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-neural-400">Completions</span>
-                  <span className="text-white font-medium">{ritual.total_completions}</span>
-                </div>
-
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-neural-400">Frequency</span>
-                  <span className="text-white font-medium capitalize">{ritual.frequency}</span>
-                </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-neural-400">Best Streak</span>
+                <span className="text-white font-medium">{ritual.best_streak} days</span>
               </div>
 
-              <div className="mt-6 pt-4 border-t border-white/10">
-                <div className="flex items-center justify-between">
-                  <div className="flex space-x-2">
-                    {ritual.tags.slice(0, 2).map((tag, i) => (
-                      <span
-                        key={i}
-                        className="px-2 py-1 bg-white/10 text-neural-300 rounded-full text-xs"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                    {ritual.tags.length > 2 && (
-                      <span className="px-2 py-1 bg-white/10 text-neural-300 rounded-full text-xs">
-                        +{ritual.tags.length - 2}
-                      </span>
-                    )}
-                  </div>
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleCompleteRitual(ritual.id)
-                    }}
-                    disabled={completingRitual === ritual.id}
-                    className="px-4 py-2 bg-green-500/20 text-green-300 rounded-lg hover:bg-green-500/30 transition-colors disabled:opacity-50 flex items-center space-x-2"
-                  >
-                    {completingRitual === ritual.id ? (
-                      <div className="w-4 h-4 border-2 border-green-300 border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      <CheckCircle className="w-4 h-4" />
-                    )}
-                    <span className="text-sm">Complete</span>
-                  </motion.button>
-                </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-neural-400">Completions</span>
+                <span className="text-white font-medium">{ritual.total_completions}</span>
               </div>
-            </motion.div>
-          ))}
-        </div>
-      )}
+
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-neural-400">Frequency</span>
+                <span className="text-white font-medium capitalize">{ritual.frequency}</span>
+              </div>
+            </div>
+
+            <div className="mt-6 pt-4 border-t border-white/10">
+              <div className="flex items-center justify-between">
+                <div className="flex space-x-2">
+                  {ritual.tags.slice(0, 2).map((tag, i) => (
+                    <span
+                      key={i}
+                      className="px-2 py-1 bg-white/10 text-neural-300 rounded-full text-xs"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                  {ritual.tags.length > 2 && (
+                    <span className="px-2 py-1 bg-white/10 text-neural-300 rounded-full text-xs">
+                      +{ritual.tags.length - 2}
+                    </span>
+                  )}
+                </div>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleCompleteRitual(ritual.id)
+                  }}
+                  disabled={completingRitual === ritual.id}
+                  className="px-4 py-2 bg-green-500/20 text-green-300 rounded-lg hover:bg-green-500/30 transition-colors disabled:opacity-50 flex items-center space-x-2"
+                >
+                  {completingRitual === ritual.id ? (
+                    <div className="w-4 h-4 border-2 border-green-300 border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <CheckCircle className="w-4 h-4" />
+                  )}
+                  <span className="text-sm">Complete</span>
+                </motion.button>
+              </div>
+            </div>
+          </motion.div>
+        ))}
+      </div>
 
       {/* Create Ritual Modal */}
       {showCreateModal && (
         <CreateRitualModal
           onClose={() => setShowCreateModal(false)}
-          onSuccess={() => {
+          onSuccess={(newRitual) => {
+            setRituals(prev => [...prev, newRitual])
             setShowCreateModal(false)
-            loadRituals()
+            toast.success('Ritual created successfully!')
           }}
         />
       )}
@@ -346,7 +345,9 @@ export default function RitualEngine() {
         <RitualDetailModal
           ritual={selectedRitual}
           onClose={() => setSelectedRitual(null)}
-          onUpdate={loadRituals}
+          onUpdate={(updatedRitual) => {
+            setRituals(prev => prev.map(r => r.id === updatedRitual.id ? updatedRitual : r))
+          }}
         />
       )}
     </div>
@@ -354,7 +355,10 @@ export default function RitualEngine() {
 }
 
 // Create Ritual Modal Component
-function CreateRitualModal({ onClose, onSuccess }: { onClose: () => void, onSuccess: () => void }) {
+function CreateRitualModal({ onClose, onSuccess }: { 
+  onClose: () => void, 
+  onSuccess: (ritual: Ritual) => void 
+}) {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -366,6 +370,7 @@ function CreateRitualModal({ onClose, onSuccess }: { onClose: () => void, onSucc
     tags: [] as string[],
     reminder_enabled: true
   })
+  const [tagInput, setTagInput] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -373,18 +378,46 @@ function CreateRitualModal({ onClose, onSuccess }: { onClose: () => void, onSucc
     if (!formData.name.trim()) return
 
     setIsSubmitting(true)
-    try {
-      const response = await ritualEngineAPI.createRitual(formData)
-      if (response.success) {
-        toast.success('Ritual created successfully!')
-        onSuccess()
+    
+    // Simulate API call
+    setTimeout(() => {
+      const newRitual: Ritual = {
+        id: Date.now().toString(),
+        name: formData.name,
+        description: formData.description,
+        category: formData.category,
+        type: formData.type,
+        frequency: formData.frequency,
+        duration_minutes: formData.duration_minutes,
+        difficulty_level: formData.difficulty_level,
+        tags: formData.tags,
+        is_active: true,
+        streak_count: 0,
+        best_streak: 0,
+        total_completions: 0,
+        created_at: new Date().toISOString()
       }
-    } catch (error) {
-      console.error('Failed to create ritual:', error)
-      toast.error('Failed to create ritual')
-    } finally {
+      
+      onSuccess(newRitual)
       setIsSubmitting(false)
+    }, 1000)
+  }
+
+  const addTag = () => {
+    if (tagInput.trim() && !formData.tags.includes(tagInput.trim())) {
+      setFormData(prev => ({
+        ...prev,
+        tags: [...prev.tags, tagInput.trim()]
+      }))
+      setTagInput('')
     }
+  }
+
+  const removeTag = (tagToRemove: string) => {
+    setFormData(prev => ({
+      ...prev,
+      tags: prev.tags.filter(tag => tag !== tagToRemove)
+    }))
   }
 
   return (
@@ -441,6 +474,7 @@ function CreateRitualModal({ onClose, onSuccess }: { onClose: () => void, onSucc
                 <option value="work">Work</option>
                 <option value="morning">Morning</option>
                 <option value="evening">Evening</option>
+                <option value="learning">Learning</option>
                 <option value="custom">Custom</option>
               </select>
             </div>
@@ -485,15 +519,42 @@ function CreateRitualModal({ onClose, onSuccess }: { onClose: () => void, onSucc
             </div>
           </div>
 
-          <div className="flex items-center space-x-3">
-            <input
-              type="checkbox"
-              id="reminder"
-              checked={formData.reminder_enabled}
-              onChange={(e) => setFormData(prev => ({ ...prev, reminder_enabled: e.target.checked }))}
-              className="w-4 h-4 text-primary-500 bg-white/5 border-white/10 rounded focus:ring-primary-500"
-            />
-            <label htmlFor="reminder" className="text-sm text-neural-300">Enable reminders</label>
+          <div>
+            <label className="block text-sm font-medium text-neural-300 mb-2">Tags</label>
+            <div className="flex items-center space-x-2 mb-2">
+              <input
+                type="text"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
+                className="flex-1 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-neural-400 focus:outline-none focus:border-primary-500/50"
+                placeholder="Add a tag"
+              />
+              <button
+                type="button"
+                onClick={addTag}
+                className="px-4 py-2 bg-primary-500/20 text-primary-300 rounded-lg hover:bg-primary-500/30 transition-colors"
+              >
+                Add
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {formData.tags.map((tag, index) => (
+                <span
+                  key={index}
+                  className="px-3 py-1 bg-white/10 text-neural-300 rounded-full text-sm flex items-center space-x-2"
+                >
+                  <span>{tag}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeTag(tag)}
+                    className="text-neural-400 hover:text-white"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
           </div>
 
           <div className="flex space-x-3 pt-4">
@@ -522,26 +583,22 @@ function CreateRitualModal({ onClose, onSuccess }: { onClose: () => void, onSucc
 function RitualDetailModal({ ritual, onClose, onUpdate }: { 
   ritual: Ritual, 
   onClose: () => void, 
-  onUpdate: () => void 
+  onUpdate: (ritual: Ritual) => void 
 }) {
-  const [analytics, setAnalytics] = useState<any>(null)
-  const [loadingAnalytics, setLoadingAnalytics] = useState(true)
-
-  useEffect(() => {
-    loadAnalytics()
-  }, [ritual.id])
-
-  const loadAnalytics = async () => {
-    try {
-      const response = await ritualEngineAPI.getRitualAnalytics(ritual.id, '30d')
-      if (response.success) {
-        setAnalytics(response.data)
-      }
-    } catch (error) {
-      console.error('Failed to load analytics:', error)
-    } finally {
-      setLoadingAnalytics(false)
-    }
+  const mockAnalytics = {
+    totalCompletions: ritual.total_completions,
+    averages: {
+      moodBefore: 6.2,
+      moodAfter: 7.8,
+      energyBefore: 5.5,
+      energyAfter: 7.2,
+      duration: ritual.duration_minutes || 20
+    },
+    improvements: {
+      moodImprovement: 1.6,
+      energyImprovement: 1.7
+    },
+    consistency: 0.85
   }
 
   return (
@@ -594,44 +651,35 @@ function RitualDetailModal({ ritual, onClose, onUpdate }: {
             </div>
           </div>
 
-          {loadingAnalytics ? (
-            <div className="text-center py-8">
-              <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-              <p className="text-neural-400">Loading analytics...</p>
-            </div>
-          ) : analytics && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-white">30-Day Analytics</h3>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 bg-white/5 rounded-xl">
-                  <h4 className="font-medium text-white mb-2">Total Completions</h4>
-                  <p className="text-2xl font-bold text-green-400">{analytics.totalCompletions}</p>
-                </div>
-
-                <div className="p-4 bg-white/5 rounded-xl">
-                  <h4 className="font-medium text-white mb-2">Consistency</h4>
-                  <p className="text-2xl font-bold text-blue-400">{Math.round(analytics.consistency * 100)}%</p>
-                </div>
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-white">30-Day Analytics</h3>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 bg-white/5 rounded-xl">
+                <h4 className="font-medium text-white mb-2">Total Completions</h4>
+                <p className="text-2xl font-bold text-green-400">{mockAnalytics.totalCompletions}</p>
               </div>
 
-              {analytics.averages && (
-                <div className="p-4 bg-white/5 rounded-xl">
-                  <h4 className="font-medium text-white mb-3">Mood & Energy Impact</h4>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-neural-400">Mood Improvement:</span>
-                      <span className="text-green-400">+{analytics.improvements.moodImprovement.toFixed(1)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-neural-400">Energy Improvement:</span>
-                      <span className="text-green-400">+{analytics.improvements.energyImprovement.toFixed(1)}</span>
-                    </div>
-                  </div>
-                </div>
-              )}
+              <div className="p-4 bg-white/5 rounded-xl">
+                <h4 className="font-medium text-white mb-2">Consistency</h4>
+                <p className="text-2xl font-bold text-blue-400">{Math.round(mockAnalytics.consistency * 100)}%</p>
+              </div>
             </div>
-          )}
+
+            <div className="p-4 bg-white/5 rounded-xl">
+              <h4 className="font-medium text-white mb-3">Mood & Energy Impact</h4>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-neural-400">Mood Improvement:</span>
+                  <span className="text-green-400">+{mockAnalytics.improvements.moodImprovement.toFixed(1)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-neural-400">Energy Improvement:</span>
+                  <span className="text-green-400">+{mockAnalytics.improvements.energyImprovement.toFixed(1)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </motion.div>
     </motion.div>

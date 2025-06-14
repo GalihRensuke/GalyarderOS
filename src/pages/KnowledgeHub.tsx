@@ -17,8 +17,6 @@ import {
   Tag,
   Network
 } from 'lucide-react'
-import { knowledgeSynthesisAPI } from '@/services/api'
-import { useAuth } from '@/contexts/AuthContext'
 import toast from 'react-hot-toast'
 
 interface KnowledgeNode {
@@ -37,43 +35,102 @@ interface KnowledgeNode {
   last_accessed: string
 }
 
+// Mock data
+const mockNodes: KnowledgeNode[] = [
+  {
+    id: '1',
+    title: 'The Power of Atomic Habits',
+    content: 'Small changes compound over time. The key insight is that habits are the compound interest of self-improvement. A 1% improvement every day leads to being 37 times better after a year.',
+    type: 'note',
+    source: 'Atomic Habits',
+    author: 'James Clear',
+    url: 'https://jamesclear.com/atomic-habits',
+    tags: ['habits', 'productivity', 'self-improvement'],
+    category: 'personal-development',
+    importance_score: 9,
+    access_count: 15,
+    created_at: '2024-01-10T00:00:00Z',
+    last_accessed: '2024-01-15T10:30:00Z'
+  },
+  {
+    id: '2',
+    title: 'Flow State Psychology',
+    content: 'Flow is a mental state where a person is fully immersed in an activity with energized focus, full involvement, and enjoyment. Key conditions: clear goals, immediate feedback, balance between challenge and skill.',
+    type: 'article',
+    source: 'Flow: The Psychology of Optimal Experience',
+    author: 'Mihaly Csikszentmihalyi',
+    tags: ['flow', 'psychology', 'performance'],
+    category: 'psychology',
+    importance_score: 8,
+    access_count: 12,
+    created_at: '2024-01-08T00:00:00Z',
+    last_accessed: '2024-01-14T15:20:00Z'
+  },
+  {
+    id: '3',
+    title: 'Deep Work Principles',
+    content: 'Deep work is the ability to focus without distraction on cognitively demanding tasks. It produces high-value output and is becoming increasingly rare in our connected world.',
+    type: 'book',
+    source: 'Deep Work',
+    author: 'Cal Newport',
+    tags: ['focus', 'productivity', 'work'],
+    category: 'productivity',
+    importance_score: 9,
+    access_count: 20,
+    created_at: '2024-01-05T00:00:00Z',
+    last_accessed: '2024-01-15T09:15:00Z'
+  },
+  {
+    id: '4',
+    title: 'Meditation Benefits',
+    content: 'Regular meditation practice leads to structural changes in the brain, improved emotional regulation, reduced stress, and enhanced focus. Even 10 minutes daily can make a significant difference.',
+    type: 'idea',
+    tags: ['meditation', 'mindfulness', 'health'],
+    category: 'health',
+    importance_score: 7,
+    access_count: 8,
+    created_at: '2024-01-12T00:00:00Z',
+    last_accessed: '2024-01-13T14:45:00Z'
+  },
+  {
+    id: '5',
+    title: 'Growth Mindset Quote',
+    content: '"The view you adopt for yourself profoundly affects the way you lead your life. It can determine whether you become the person you want to be and whether you accomplish the things you value."',
+    type: 'quote',
+    author: 'Carol Dweck',
+    source: 'Mindset',
+    tags: ['mindset', 'growth', 'psychology'],
+    category: 'psychology',
+    importance_score: 6,
+    access_count: 5,
+    created_at: '2024-01-14T00:00:00Z',
+    last_accessed: '2024-01-14T16:30:00Z'
+  }
+]
+
 export default function KnowledgeHub() {
-  const { user } = useAuth()
-  const [nodes, setNodes] = useState<KnowledgeNode[]>([])
-  const [loading, setLoading] = useState(true)
+  const [nodes, setNodes] = useState<KnowledgeNode[]>(mockNodes)
+  const [loading, setLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedType, setSelectedType] = useState('all')
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [selectedNode, setSelectedNode] = useState<KnowledgeNode | null>(null)
 
-  useEffect(() => {
-    if (user) {
-      loadNodes()
-    }
-  }, [user, selectedType, selectedCategory])
-
-  const loadNodes = async () => {
-    try {
-      const filters: any = {}
-      if (selectedType !== 'all') filters.type = selectedType
-      if (selectedCategory !== 'all') filters.category = selectedCategory
-      if (searchQuery) filters.search = searchQuery
-
-      const response = await knowledgeSynthesisAPI.getKnowledgeNodes(1, 50, filters)
-      if (response.success && response.data) {
-        setNodes(response.data)
-      }
-    } catch (error) {
-      console.error('Failed to load knowledge nodes:', error)
-      toast.error('Failed to load knowledge nodes')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const filteredNodes = nodes.filter(node => {
+    const matchesSearch = searchQuery === '' || 
+      node.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      node.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      node.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+    
+    const matchesType = selectedType === 'all' || node.type === selectedType
+    const matchesCategory = selectedCategory === 'all' || node.category === selectedCategory
+    
+    return matchesSearch && matchesType && matchesCategory
+  })
 
   const handleSearch = () => {
-    loadNodes()
+    // Search is handled by filteredNodes
   }
 
   const getTypeIcon = (type: string) => {
@@ -111,28 +168,6 @@ export default function KnowledgeHub() {
         }`}
       />
     ))
-  }
-
-  if (!user) {
-    return (
-      <div className="max-w-4xl mx-auto">
-        <div className="neural-card text-center">
-          <h1 className="text-2xl font-bold text-white mb-4">Please sign in to access Knowledge Hub</h1>
-          <p className="text-neural-300">Organize and connect your knowledge with AI-powered insights.</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (loading) {
-    return (
-      <div className="max-w-4xl mx-auto">
-        <div className="neural-card text-center">
-          <div className="w-16 h-16 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-neural-300">Loading your knowledge base...</p>
-        </div>
-      </div>
-    )
   }
 
   return (
@@ -220,13 +255,12 @@ export default function KnowledgeHub() {
             className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-primary-500/50"
           >
             <option value="all">All Categories</option>
+            <option value="personal-development">Personal Development</option>
+            <option value="productivity">Productivity</option>
+            <option value="psychology">Psychology</option>
+            <option value="health">Health</option>
             <option value="technology">Technology</option>
             <option value="business">Business</option>
-            <option value="science">Science</option>
-            <option value="philosophy">Philosophy</option>
-            <option value="health">Health</option>
-            <option value="education">Education</option>
-            <option value="personal">Personal</option>
           </select>
         </div>
       </motion.div>
@@ -280,126 +314,108 @@ export default function KnowledgeHub() {
       </div>
 
       {/* Knowledge Nodes */}
-      {nodes.length === 0 ? (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="neural-card text-center py-12"
-        >
-          <BookOpen className="w-16 h-16 text-neural-600 mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-white mb-2">No knowledge nodes yet</h3>
-          <p className="text-neural-400 mb-6">Start building your knowledge base by adding your first note, article, or idea</p>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="quantum-button"
-          >
-            <Plus className="w-5 h-5 mr-2" />
-            Add Your First Knowledge
-          </button>
-        </motion.div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {nodes.map((node, index) => {
-            const TypeIcon = getTypeIcon(node.type)
-            return (
-              <motion.div
-                key={node.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="neural-card group hover:scale-105 transition-all cursor-pointer"
-                onClick={() => setSelectedNode(node)}
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div className={`w-12 h-12 bg-gradient-to-br ${getTypeColor(node.type)} rounded-xl flex items-center justify-center`}>
-                    <TypeIcon className="w-6 h-6 text-white" />
-                  </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredNodes.map((node, index) => {
+          const TypeIcon = getTypeIcon(node.type)
+          return (
+            <motion.div
+              key={node.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+              className="neural-card group hover:scale-105 transition-all cursor-pointer"
+              onClick={() => setSelectedNode(node)}
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className={`w-12 h-12 bg-gradient-to-br ${getTypeColor(node.type)} rounded-xl flex items-center justify-center`}>
+                  <TypeIcon className="w-6 h-6 text-white" />
+                </div>
+                <div className="flex items-center space-x-1">
+                  {getImportanceStars(node.importance_score).slice(0, 5)}
+                </div>
+              </div>
+
+              <h3 className="text-lg font-bold text-white mb-2 line-clamp-2">{node.title}</h3>
+              <p className="text-neural-300 text-sm mb-4 line-clamp-3">{node.content}</p>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-neural-400">Type</span>
+                  <span className="text-white capitalize">{node.type}</span>
+                </div>
+
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-neural-400">Category</span>
+                  <span className="text-white capitalize">{node.category.replace('-', ' ')}</span>
+                </div>
+
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-neural-400">Views</span>
                   <div className="flex items-center space-x-1">
-                    {getImportanceStars(node.importance_score).slice(0, 5)}
+                    <Eye className="w-4 h-4 text-neural-400" />
+                    <span className="text-white">{node.access_count}</span>
                   </div>
                 </div>
 
-                <h3 className="text-lg font-bold text-white mb-2 line-clamp-2">{node.title}</h3>
-                <p className="text-neural-300 text-sm mb-4 line-clamp-3">{node.content}</p>
-
-                <div className="space-y-3">
+                {node.source && (
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-neural-400">Type</span>
-                    <span className="text-white capitalize">{node.type}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-neural-400">Category</span>
-                    <span className="text-white capitalize">{node.category}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-neural-400">Views</span>
-                    <div className="flex items-center space-x-1">
-                      <Eye className="w-4 h-4 text-neural-400" />
-                      <span className="text-white">{node.access_count}</span>
-                    </div>
-                  </div>
-
-                  {node.source && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-neural-400">Source</span>
-                      <span className="text-white truncate max-w-32">{node.source}</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="mt-6 pt-4 border-t border-white/10">
-                  <div className="flex items-center justify-between">
-                    <div className="flex space-x-2">
-                      {node.tags.slice(0, 2).map((tag, i) => (
-                        <span
-                          key={i}
-                          className="px-2 py-1 bg-white/10 text-neural-300 rounded-full text-xs"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                      {node.tags.length > 2 && (
-                        <span className="px-2 py-1 bg-white/10 text-neural-300 rounded-full text-xs">
-                          +{node.tags.length - 2}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center space-x-1 text-xs text-neural-400">
-                      <Calendar className="w-3 h-3" />
-                      <span>{new Date(node.created_at).toLocaleDateString()}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {node.url && (
-                  <div className="mt-3">
-                    <a
-                      href={node.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className="flex items-center space-x-2 text-primary-400 hover:text-primary-300 text-sm"
-                    >
-                      <LinkIcon className="w-4 h-4" />
-                      <span>View Source</span>
-                    </a>
+                    <span className="text-neural-400">Source</span>
+                    <span className="text-white truncate max-w-32">{node.source}</span>
                   </div>
                 )}
-              </motion.div>
-            )
-          })}
-        </div>
-      )}
+              </div>
+
+              <div className="mt-6 pt-4 border-t border-white/10">
+                <div className="flex items-center justify-between">
+                  <div className="flex space-x-2">
+                    {node.tags.slice(0, 2).map((tag, i) => (
+                      <span
+                        key={i}
+                        className="px-2 py-1 bg-white/10 text-neural-300 rounded-full text-xs"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                    {node.tags.length > 2 && (
+                      <span className="px-2 py-1 bg-white/10 text-neural-300 rounded-full text-xs">
+                        +{node.tags.length - 2}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center space-x-1 text-xs text-neural-400">
+                    <Calendar className="w-3 h-3" />
+                    <span>{new Date(node.created_at).toLocaleDateString()}</span>
+                  </div>
+                </div>
+              </div>
+
+              {node.url && (
+                <div className="mt-3">
+                  <a
+                    href={node.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex items-center space-x-2 text-primary-400 hover:text-primary-300 text-sm"
+                  >
+                    <LinkIcon className="w-4 h-4" />
+                    <span>View Source</span>
+                  </a>
+                </div>
+              )}
+            </motion.div>
+          )
+        })}
+      </div>
 
       {/* Create Knowledge Modal */}
       {showCreateModal && (
         <CreateKnowledgeModal
           onClose={() => setShowCreateModal(false)}
-          onSuccess={() => {
+          onSuccess={(newNode) => {
+            setNodes(prev => [...prev, newNode])
             setShowCreateModal(false)
-            loadNodes()
+            toast.success('Knowledge node created!')
           }}
         />
       )}
@@ -409,7 +425,9 @@ export default function KnowledgeHub() {
         <KnowledgeDetailModal
           node={selectedNode}
           onClose={() => setSelectedNode(null)}
-          onUpdate={loadNodes}
+          onUpdate={(updatedNode) => {
+            setNodes(prev => prev.map(n => n.id === updatedNode.id ? updatedNode : n))
+          }}
         />
       )}
     </div>
@@ -417,7 +435,10 @@ export default function KnowledgeHub() {
 }
 
 // Create Knowledge Modal Component
-function CreateKnowledgeModal({ onClose, onSuccess }: { onClose: () => void, onSuccess: () => void }) {
+function CreateKnowledgeModal({ onClose, onSuccess }: { 
+  onClose: () => void, 
+  onSuccess: (node: KnowledgeNode) => void 
+}) {
   const [formData, setFormData] = useState({
     title: '',
     content: '',
@@ -425,7 +446,7 @@ function CreateKnowledgeModal({ onClose, onSuccess }: { onClose: () => void, onS
     source: '',
     author: '',
     url: '',
-    category: 'personal',
+    category: 'personal-development',
     importance_score: 5,
     tags: [] as string[]
   })
@@ -437,18 +458,28 @@ function CreateKnowledgeModal({ onClose, onSuccess }: { onClose: () => void, onS
     if (!formData.title.trim() || !formData.content.trim()) return
 
     setIsSubmitting(true)
-    try {
-      const response = await knowledgeSynthesisAPI.createKnowledgeNode(formData)
-      if (response.success) {
-        toast.success('Knowledge node created successfully!')
-        onSuccess()
+    
+    // Simulate API call
+    setTimeout(() => {
+      const newNode: KnowledgeNode = {
+        id: Date.now().toString(),
+        title: formData.title,
+        content: formData.content,
+        type: formData.type,
+        source: formData.source,
+        author: formData.author,
+        url: formData.url,
+        category: formData.category,
+        importance_score: formData.importance_score,
+        tags: formData.tags,
+        access_count: 0,
+        created_at: new Date().toISOString(),
+        last_accessed: new Date().toISOString()
       }
-    } catch (error) {
-      console.error('Failed to create knowledge node:', error)
-      toast.error('Failed to create knowledge node')
-    } finally {
+      
+      onSuccess(newNode)
       setIsSubmitting(false)
-    }
+    }, 1000)
   }
 
   const addTag = () => {
@@ -535,13 +566,12 @@ function CreateKnowledgeModal({ onClose, onSuccess }: { onClose: () => void, onS
                 onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
                 className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-primary-500/50"
               >
-                <option value="personal">Personal</option>
+                <option value="personal-development">Personal Development</option>
+                <option value="productivity">Productivity</option>
+                <option value="psychology">Psychology</option>
+                <option value="health">Health</option>
                 <option value="technology">Technology</option>
                 <option value="business">Business</option>
-                <option value="science">Science</option>
-                <option value="philosophy">Philosophy</option>
-                <option value="health">Health</option>
-                <option value="education">Education</option>
               </select>
             </div>
           </div>
@@ -662,29 +692,15 @@ function CreateKnowledgeModal({ onClose, onSuccess }: { onClose: () => void, onS
 function KnowledgeDetailModal({ node, onClose, onUpdate }: { 
   node: KnowledgeNode, 
   onClose: () => void, 
-  onUpdate: () => void 
+  onUpdate: (node: KnowledgeNode) => void 
 }) {
-  const [relatedNodes, setRelatedNodes] = useState<KnowledgeNode[]>([])
-  const [loadingRelated, setLoadingRelated] = useState(true)
-
-  useEffect(() => {
-    loadRelatedNodes()
-  }, [node.id])
-
-  const loadRelatedNodes = async () => {
-    try {
-      const response = await knowledgeSynthesisAPI.getRelatedNodes(node.id, 5)
-      if (response.success) {
-        setRelatedNodes(response.data)
-      }
-    } catch (error) {
-      console.error('Failed to load related nodes:', error)
-    } finally {
-      setLoadingRelated(false)
-    }
-  }
-
   const TypeIcon = getTypeIcon(node.type)
+
+  // Mock related nodes
+  const relatedNodes = [
+    { id: '1', title: 'Related Concept 1', type: 'note' },
+    { id: '2', title: 'Related Concept 2', type: 'article' }
+  ]
 
   return (
     <motion.div
@@ -708,7 +724,7 @@ function KnowledgeDetailModal({ node, onClose, onUpdate }: {
             </div>
             <div>
               <h2 className="text-2xl font-bold text-white">{node.title}</h2>
-              <p className="text-neural-400 capitalize">{node.type} • {node.category}</p>
+              <p className="text-neural-400 capitalize">{node.type} • {node.category.replace('-', ' ')}</p>
             </div>
           </div>
           <button
@@ -744,7 +760,7 @@ function KnowledgeDetailModal({ node, onClose, onUpdate }: {
               </div>
             )}
 
-            {!loadingRelated && relatedNodes.length > 0 && (
+            {relatedNodes.length > 0 && (
               <div>
                 <h3 className="text-lg font-semibold text-white mb-3">Related Knowledge</h3>
                 <div className="space-y-3">
@@ -847,4 +863,41 @@ function KnowledgeDetailModal({ node, onClose, onUpdate }: {
       </motion.div>
     </motion.div>
   )
+}
+
+function getTypeIcon(type: string) {
+  const icons: { [key: string]: React.ElementType } = {
+    'note': FileText,
+    'article': BookOpen,
+    'book': BookOpen,
+    'video': Video,
+    'podcast': Headphones,
+    'idea': Lightbulb,
+    'quote': Quote
+  }
+  return icons[type] || FileText
+}
+
+function getTypeColor(type: string) {
+  const colors: { [key: string]: string } = {
+    'note': 'from-blue-500 to-cyan-500',
+    'article': 'from-green-500 to-emerald-500',
+    'book': 'from-purple-500 to-pink-500',
+    'video': 'from-red-500 to-orange-500',
+    'podcast': 'from-yellow-500 to-amber-500',
+    'idea': 'from-indigo-500 to-blue-500',
+    'quote': 'from-gray-500 to-slate-500'
+  }
+  return colors[type] || 'from-gray-500 to-slate-500'
+}
+
+function getImportanceStars(score: number) {
+  return Array.from({ length: 10 }, (_, i) => (
+    <Star
+      key={i}
+      className={`w-3 h-3 ${
+        i < score ? 'text-yellow-400 fill-current' : 'text-gray-600'
+      }`}
+    />
+  ))
 }
