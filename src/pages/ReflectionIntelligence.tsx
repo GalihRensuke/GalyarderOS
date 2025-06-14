@@ -1,6 +1,6 @@
 import React from 'react'
 import { motion } from 'framer-motion'
-import { Mirror } from 'lucide-react'
+import { Carrot as Mirror } from 'lucide-react'
 
 export default function ReflectionIntelligence() {
   return (
