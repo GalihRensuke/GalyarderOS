@@ -15,10 +15,13 @@
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, PATCH",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, Notion-Version",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, Notion-Version, X-Notion-Token",
 };
 
-const NOTION_TOKEN = Deno.env.get('VITE_NOTION_TOKEN');
+// Try multiple environment variable names for the Notion token
+const NOTION_TOKEN = Deno.env.get('NOTION_TOKEN') || 
+                    Deno.env.get('VITE_NOTION_TOKEN') || 
+                    Deno.env.get('NOTION_API_TOKEN');
 const NOTION_API_URL = 'https://api.notion.com/v1';
 
 Deno.serve(async (req: Request) => {
@@ -29,16 +32,6 @@ Deno.serve(async (req: Request) => {
         status: 200,
         headers: corsHeaders,
       });
-    }
-
-    if (!NOTION_TOKEN) {
-      return new Response(
-        JSON.stringify({ error: 'Notion token not configured' }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
     }
 
     // Extract the Notion API endpoint from the request
@@ -55,12 +48,40 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Get token from environment or request headers
+    let token = NOTION_TOKEN;
+    
+    // If no token in environment, try to get it from request headers
+    if (!token) {
+      const authHeader = req.headers.get('Authorization');
+      const notionTokenHeader = req.headers.get('X-Notion-Token');
+      
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.substring(7);
+      } else if (notionTokenHeader) {
+        token = notionTokenHeader;
+      }
+    }
+
+    if (!token) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Notion token not configured',
+          details: 'Please set NOTION_TOKEN as a Supabase secret or provide it in the request headers'
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
     // Prepare the request to Notion API
     const notionUrl = `${NOTION_API_URL}${endpoint}`;
     const requestOptions: RequestInit = {
       method: req.method,
       headers: {
-        'Authorization': `Bearer ${NOTION_TOKEN}`,
+        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
         'Notion-Version': '2022-06-28'
       }

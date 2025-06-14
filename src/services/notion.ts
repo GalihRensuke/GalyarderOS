@@ -44,6 +44,7 @@ class NotionService {
         ...options,
         headers: {
           'Content-Type': 'application/json',
+          'X-Notion-Token': NOTION_TOKEN, // Pass token in custom header
           ...options.headers
         }
       })
